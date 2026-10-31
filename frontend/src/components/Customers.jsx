@@ -4,7 +4,7 @@ import { avatarColor, initials, fmtDate } from '../utils'
 import Modal from './Modal'
 import { useToast } from './Toast'
 
-const EMPTY = { name: '', mobile: '', address: '', email: '', customer_type: 'Regular' }
+const EMPTY = { name: '', mobile: '', address: '', email: '', customerType: 'Regular' }
 
 export default function Customers() {
   const [customers, setCustomers] = useState([])
@@ -67,17 +67,17 @@ export default function Customers() {
               <div className="cust-name">{c.name}</div>
               <div className="cust-meta">📞 {c.mobile}</div>
               {c.address && <div className="cust-meta">📍 {c.address}</div>}
-              <div className="cust-meta">Since {fmtDate(c.reg_date)}</div>
-              {c.customer_type && c.customer_type !== 'Regular' && (
+              <div className="cust-meta">Since {fmtDate(c.regDate)}</div>
+              {c.customerType && c.customerType !== 'Regular' && (
                 <span className="badge" style={{
                   fontSize: 10, padding: '2px 6px', marginTop: 2,
-                  background: c.customer_type === 'VIP' ? '#7C3AED' : c.customer_type === 'Corporate' ? '#0BA5A4' : '#6B7280',
+                  background: c.customerType === 'VIP' ? '#7C3AED' : c.customerType === 'Corporate' ? '#0BA5A4' : '#6B7280',
                   color: '#fff'
-                }}>{c.customer_type}</span>
+                }}>{c.customerType}</span>
               )}
             </div>
             <div className="cust-orders">
-              <span>{c.order_count || 0}</span>
+              <span>{c.orderCount || 0}</span>
               <p>Orders</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -115,7 +115,7 @@ export default function Customers() {
           </div>
           <div className="form-group">
             <label>Customer Type</label>
-            <select value={form.customer_type || 'Regular'} onChange={e => setForm(f => ({ ...f, customer_type: e.target.value }))}>
+            <select value={form.customerType || 'Regular'} onChange={e => setForm(f => ({ ...f, customerType: e.target.value }))}>
               <option>Regular</option>
               <option>VIP</option>
               <option>Corporate</option>

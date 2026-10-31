@@ -39,7 +39,7 @@ export default function Orders() {
   async function doUpdateStatus() {
     if (!newStatus) return
     try {
-      await updateOrderStatus(statusModal.id, { status: newStatus, note: statusNote, updated_by: 'Admin' })
+      await updateOrderStatus(statusModal.id, { status: newStatus, note: statusNote, updatedBy: 'Admin' })
       toast(`Status updated to ${newStatus}`)
       setStatusModal(null)
       setDetailOrder(null)
@@ -79,13 +79,13 @@ export default function Orders() {
               {orders.map(o => (
                 <tr key={o.id} style={{ cursor: 'pointer' }}>
                   <td onClick={() => openDetail(o.id)}><strong style={{ color: 'var(--blue)' }}>{o.id}</strong></td>
-                  <td>{fmtDate(o.entry_date)}</td>
-                  <td onClick={() => openDetail(o.id)}>{o.cust_name}</td>
+                  <td>{fmtDate(o.entryDate)}</td>
+                  <td onClick={() => openDetail(o.id)}>{o.custName}</td>
                   <td>{o.mobile}</td>
                   <td>{o.items?.length || '–'}</td>
                   <td>{fmtMoney(o.total)}</td>
                   <td style={{ color: o.balance > 0 ? 'var(--red)' : 'var(--green)' }}>{fmtMoney(o.balance)}</td>
-                  <td style={{ color: o.delivery_date < today() && o.status !== 'Delivered' ? 'var(--red)' : 'inherit' }}>{fmtDate(o.delivery_date)}</td>
+                  <td style={{ color: o.deliveryDate < today() && o.status !== 'Delivered' ? 'var(--red)' : 'inherit' }}>{fmtDate(o.deliveryDate)}</td>
                   <td><span className={`badge ${statusBadgeClass(o.status)}`}>{o.status}</span></td>
                   <td style={{ display: 'flex', gap: 4 }}>
                     <button className="btn btn-outline btn-sm" onClick={() => openDetail(o.id)}>View</button>
@@ -116,29 +116,29 @@ export default function Orders() {
             </div>
             <hr className="receipt-divider" />
             <div className="receipt-row"><span>Receipt No</span><strong>{detailOrder.id}</strong></div>
-            <div className="receipt-row"><span>Date</span><span>{fmtDate(detailOrder.entry_date)}</span></div>
-            <div className="receipt-row"><span>Customer</span><span>{detailOrder.cust_name}</span></div>
+            <div className="receipt-row"><span>Date</span><span>{fmtDate(detailOrder.entryDate)}</span></div>
+            <div className="receipt-row"><span>Customer</span><span>{detailOrder.custName}</span></div>
             <div className="receipt-row"><span>Mobile</span><span>{detailOrder.mobile}</span></div>
-            <div className="receipt-row"><span>Delivery Date</span><span>{fmtDate(detailOrder.delivery_date)}</span></div>
+            <div className="receipt-row"><span>Delivery Date</span><span>{fmtDate(detailOrder.deliveryDate)}</span></div>
             <div className="receipt-row"><span>Status</span><span className={`badge ${statusBadgeClass(detailOrder.status)}`}>{detailOrder.status}</span></div>
             <hr className="receipt-divider" />
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray400)', marginBottom: 6 }}>ITEMS</div>
             {(detailOrder.items || []).map((it, i) => (
-              <div className="receipt-row" key={i}><span>{it.product_name} ×{it.qty}</span><span>{fmtMoney(it.amount)}</span></div>
+              <div className="receipt-row" key={i}><span>{it.productName} ×{it.qty}</span><span>{fmtMoney(it.amount)}</span></div>
             ))}
             <hr className="receipt-divider" />
             <div className="receipt-row"><span>Total</span><strong>{fmtMoney(detailOrder.total)}</strong></div>
             <div className="receipt-row"><span>Advance</span><span>{fmtMoney(detailOrder.advance)}</span></div>
             <div className="receipt-total"><span>Balance Due</span><span>{fmtMoney(detailOrder.balance)}</span></div>
-            <div style={{ marginTop: 12, fontSize: 11, color: 'var(--gray400)' }}>Payment: {detailOrder.pay_mode}</div>
+            <div style={{ marginTop: 12, fontSize: 11, color: 'var(--gray400)' }}>Payment: {detailOrder.payMode}</div>
             {detailOrder.history?.length > 0 && (
               <div style={{ marginTop: 16 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Status History</div>
                 {detailOrder.history.map((h, i) => (
                   <div key={i} style={{ display: 'flex', gap: 10, padding: '7px 0', borderBottom: '1px solid var(--gray100)', fontSize: 12 }}>
                     <span className={`badge ${statusBadgeClass(h.status)}`}>{h.status}</span>
-                    <span style={{ color: 'var(--gray400)' }}>{new Date(h.updated_at).toLocaleString('en-IN')}</span>
-                    <span style={{ color: 'var(--gray600)' }}>{h.updated_by}</span>
+                    <span style={{ color: 'var(--gray400)' }}>{new Date(h.updatedAt).toLocaleString('en-IN')}</span>
+                    <span style={{ color: 'var(--gray600)' }}>{h.updatedBy}</span>
                   </div>
                 ))}
               </div>
@@ -158,7 +158,7 @@ export default function Orders() {
             <div style={{ marginBottom: 14 }}>
               <span className={`badge ${statusBadgeClass(statusModal.status)}`}>{statusModal.status}</span>
               <span style={{ fontSize: 13, color: 'var(--gray400)', marginLeft: 8 }}>
-                Current — <strong>{statusModal.id}</strong> · {statusModal.cust_name}
+                Current — <strong>{statusModal.id}</strong> · {statusModal.custName}
               </span>
             </div>
             <div className="form-group" style={{ marginBottom: 10 }}>

@@ -19,7 +19,7 @@ export default function Dashboard() {
   if (loading) return <div className="loading">Loading dashboard...</div>
   if (!stats) return <div className="alert alert-danger">Failed to load dashboard</div>
 
-  const dueOrders = stats.recent_orders?.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled' && o.delivery_date < today()) || []
+  const dueOrders = stats.recentOrders?.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled' && o.deliveryDate < today()) || []
 
   const showSubWarning = subStatus && subStatus.status !== 'SuperAdmin' && subStatus.status !== 'None' &&
     (subStatus.status === 'Expired' || subStatus.days_remaining <= 7)
@@ -52,25 +52,25 @@ export default function Dashboard() {
           <div className="stat-icon si-blue">
             <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           </div>
-          <div className="stat-num">{stats.total_orders}</div>
+          <div className="stat-num">{stats.totalOrders}</div>
           <div className="stat-lbl">Total Orders</div>
-          <div className="stat-trend t-up">↑ Today: {stats.today_orders} new</div>
+          <div className="stat-trend t-up">↑ Today: {stats.todayOrders} new</div>
         </div>
         <div className="stat-card">
           <div className="stat-icon si-amber">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
-          <div className="stat-num">{stats.pending_orders}</div>
+          <div className="stat-num">{stats.pendingOrders}</div>
           <div className="stat-lbl">Pending Orders</div>
-          <div className={`stat-trend ${stats.overdue_orders > 0 ? 't-down' : 't-up'}`}>
-            {stats.overdue_orders > 0 ? `⚠️ ${stats.overdue_orders} overdue` : '✓ All on time'}
+          <div className={`stat-trend ${stats.overdueOrders > 0 ? 't-down' : 't-up'}`}>
+            {stats.overdueOrders > 0 ? `⚠️ ${stats.overdueOrders} overdue` : '✓ All on time'}
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon si-green">
             <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           </div>
-          <div className="stat-num">{stats.ready_orders}</div>
+          <div className="stat-num">{stats.readyOrders}</div>
           <div className="stat-lbl">Ready for Delivery</div>
           <div className="stat-trend t-up">✓ Ready to hand over</div>
         </div>
@@ -78,9 +78,9 @@ export default function Dashboard() {
           <div className="stat-icon si-teal">
             <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
-          <div className="stat-num">{fmtMoney(stats.total_collection)}</div>
+          <div className="stat-num">{fmtMoney(stats.totalCollection)}</div>
           <div className="stat-lbl">Total Collection</div>
-          <div className="stat-trend t-up">Today: {fmtMoney(stats.today_collection)}</div>
+          <div className="stat-trend t-up">Today: {fmtMoney(stats.todayCollection)}</div>
         </div>
       </div>
 
@@ -97,16 +97,16 @@ export default function Dashboard() {
             <table>
               <thead><tr><th>Receipt</th><th>Customer</th><th>Amount</th><th>Delivery</th><th>Status</th></tr></thead>
               <tbody>
-                {(stats.recent_orders || []).map(o => (
+                {(stats.recentOrders || []).map(o => (
                   <tr key={o.id} onClick={() => navigate('/orders')} style={{ cursor: 'pointer' }}>
                     <td><strong style={{ color: 'var(--blue)' }}>{o.id}</strong></td>
-                    <td>{o.cust_name}</td>
+                    <td>{o.custName}</td>
                     <td>{fmtMoney(o.total)}</td>
-                    <td style={{ color: o.delivery_date < today() && o.status !== 'Delivered' ? 'var(--red)' : 'inherit' }}>{fmtDate(o.delivery_date)}</td>
+                    <td style={{ color: o.deliveryDate < today() && o.status !== 'Delivered' ? 'var(--red)' : 'inherit' }}>{fmtDate(o.deliveryDate)}</td>
                     <td><span className={`badge ${statusBadgeClass(o.status)}`}>{o.status}</span></td>
                   </tr>
                 ))}
-                {!stats.recent_orders?.length && <tr><td colSpan="5" style={{ textAlign: 'center', padding: 20, color: 'var(--gray400)' }}>No orders yet</td></tr>}
+                {!stats.recentOrders?.length && <tr><td colSpan="5" style={{ textAlign: 'center', padding: 20, color: 'var(--gray400)' }}>No orders yet</td></tr>}
               </tbody>
             </table>
           </div>
@@ -128,7 +128,7 @@ export default function Dashboard() {
                     <div className="sf-label">{s}</div>
                     <div className="sf-sub">{s === 'Ready' ? 'Ready for delivery' : s === 'Delivered' ? 'Complete' : ''}</div>
                   </div>
-                  <div className="sf-count">{stats.status_counts?.[s] || 0}</div>
+                  <div className="sf-count">{stats.statusCounts?.[s] || 0}</div>
                   <div className="sf-line" />
                 </div>
               ))}
@@ -148,13 +148,13 @@ export default function Dashboard() {
           </div>
           <div className="panel-body">
             {dueOrders.map(o => {
-              const days = Math.floor((new Date(today()) - new Date(o.delivery_date)) / 86400000)
+              const days = Math.floor((new Date(today()) - new Date(o.deliveryDate)) / 86400000)
               return (
                 <div className="due-item" key={o.id}>
                   <div style={{ width: 34, height: 34, borderRadius: 9, background: days > 2 ? '#FEF2F2' : '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👕</div>
                   <div>
-                    <div className="due-name">{o.cust_name}</div>
-                    <div className="due-meta">{o.id} · Due: {fmtDate(o.delivery_date)}</div>
+                    <div className="due-name">{o.custName}</div>
+                    <div className="due-meta">{o.id} · Due: {fmtDate(o.deliveryDate)}</div>
                   </div>
                   <div className={`due-days ${days > 2 ? 'days-red' : 'days-amber'}`}>{days} days late</div>
                 </div>

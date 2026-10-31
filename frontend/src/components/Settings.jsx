@@ -3,7 +3,7 @@ import { getSettings, updateSettings } from '../api/client'
 import { useToast } from './Toast'
 
 export default function Settings() {
-  const [form, setForm] = useState({ shop_name: '', shop_address: '', shop_city: '', shop_phone: '', whatsapp: false, barcode: false, sms: false })
+  const [form, setForm] = useState({ shopName: '', shopAddress: '', shopCity: '', shopPhone: '', whatsapp: false, barcode: false, sms: false })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const toast = useToast()
@@ -41,20 +41,20 @@ export default function Settings() {
           <div className="form-row">
             <div className="form-group">
               <label>Shop Name</label>
-              <input type="text" value={form.shop_name} onChange={e => setForm(f => ({ ...f, shop_name: e.target.value }))} />
+              <input type="text" value={form.shopName} onChange={e => setForm(f => ({ ...f, shopName: e.target.value }))} />
             </div>
             <div className="form-group">
               <label>Phone Number</label>
-              <input type="text" value={form.shop_phone} onChange={e => setForm(f => ({ ...f, shop_phone: e.target.value }))} />
+              <input type="text" value={form.shopPhone} onChange={e => setForm(f => ({ ...f, shopPhone: e.target.value }))} />
             </div>
           </div>
           <div className="form-group">
             <label>Address</label>
-            <input type="text" value={form.shop_address} onChange={e => setForm(f => ({ ...f, shop_address: e.target.value }))} />
+            <input type="text" value={form.shopAddress} onChange={e => setForm(f => ({ ...f, shopAddress: e.target.value }))} />
           </div>
           <div className="form-group">
             <label>City / State</label>
-            <input type="text" value={form.shop_city} onChange={e => setForm(f => ({ ...f, shop_city: e.target.value }))} />
+            <input type="text" value={form.shopCity} onChange={e => setForm(f => ({ ...f, shopCity: e.target.value }))} />
           </div>
         </div>
       </div>

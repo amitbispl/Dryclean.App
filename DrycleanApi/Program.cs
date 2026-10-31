@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Npgsql;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -53,20 +54,30 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-    // Self-heal: if subscription_plans table is missing but migration shows applied, remove the
-    // history entry so Migrate() below re-applies it cleanly.
-    var conn = db.Database.GetDbConnection();
-    conn.Open();
-    using (var cmd = conn.CreateCommand())
+    try
     {
-        cmd.CommandText = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'subscription_plans' AND table_schema = 'public')";
-        var tableExists = (bool)(cmd.ExecuteScalar() ?? false);
+
+    // Self-heal: if subscription_plans table is missing but migration entry is present,
+    // delete the stale history row so Migrate() re-applies the migration cleanly.
+    try
+    {
+        var connStr = app.Configuration.GetConnectionString("DefaultConnection")!;
+        using var healConn = new Npgsql.NpgsqlConnection(connStr);
+        healConn.Open();
+        using var checkCmd = healConn.CreateCommand();
+        checkCmd.CommandText = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='subscription_plans' AND table_schema='public')";
+        var tableExists = (bool)(checkCmd.ExecuteScalar() ?? false);
         if (!tableExists)
         {
-            cmd.CommandText = "DELETE FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = '20261031090452_AddSubscriptionsAndCustomerType'";
-            cmd.ExecuteNonQuery();
+            using var delCmd = healConn.CreateCommand();
+            delCmd.CommandText = "DELETE FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\"='20261031090452_AddSubscriptionsAndCustomerType'";
+            delCmd.ExecuteNonQuery();
+            Console.WriteLine("[Self-heal] Removed stale migration entry — will re-apply.");
         }
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"[Self-heal] Non-fatal check error: {ex.Message}");
     }
 
     db.Database.Migrate();
@@ -185,6 +196,14 @@ using (var scope = app.Services.CreateScope())
             });
             db.SaveChanges();
         }
+    }
+    } // end outer try
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("=== STARTUP ERROR ===");
+        Console.Error.WriteLine(ex.ToString());
+        Console.Error.Flush();
+        throw;
     }
 }
 
@@ -529,7 +548,7 @@ app.MapPost("/api/orders", async (AppDbContext db, ClaimsPrincipal claims, Creat
 {
     var companyId = GetCompanyId(claims);
     var userName = GetUserName(claims);
-    var seq = await db.Database.SqlQueryRaw<long>("SELECT nextval('order_num_seq')").FirstAsync();
+    var seq = await db.Database.SqlQueryRaw<long>("SELECT nextval('order_num_seq') AS \"Value\"").FirstAsync();
     var orderId = $"DC{seq}";
     var total = req.Items.Sum(i => i.Amount);
     var balance = Math.Max(0, total - req.Advance);

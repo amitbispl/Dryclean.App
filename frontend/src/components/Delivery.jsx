@@ -19,7 +19,7 @@ export default function Delivery() {
 
   async function markDelivered(id) {
     try {
-      await updateOrderStatus(id, { status: 'Delivered', updated_by: 'Counter' })
+      await updateOrderStatus(id, { status: 'Delivered', updatedBy: 'Counter' })
       toast(`${id} marked as Delivered`)
       load()
     } catch { toast('Failed', 'danger') }

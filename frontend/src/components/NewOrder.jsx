@@ -12,10 +12,10 @@ export default function NewOrder() {
   const [items, setItems] = useState([])
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
-    cust_id: '', cust_name: '', mobile: '', customer_type: 'Regular',
-    entry_date: today(),
-    delivery_date: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
-    advance: 0, pay_mode: 'Cash',
+    custId: '', custName: '', mobile: '', customerType: 'Regular',
+    entryDate: today(),
+    deliveryDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
+    advance: 0, payMode: 'Cash',
   })
 
   useEffect(() => {
@@ -28,12 +28,12 @@ export default function NewOrder() {
 
   function onCustSelect(val) {
     if (val === 'new') {
-      setForm(f => ({ ...f, cust_id: '', cust_name: '', mobile: '', customer_type: 'Regular' }))
+      setForm(f => ({ ...f, custId: '', custName: '', mobile: '', customerType: 'Regular' }))
       return
     }
     if (!val) return
     const c = customers.find(x => x.id == val)
-    if (c) setForm(f => ({ ...f, cust_id: c.id, cust_name: c.name, mobile: c.mobile, customer_type: c.customer_type || 'Regular' }))
+    if (c) setForm(f => ({ ...f, custId: c.id, custName: c.name, mobile: c.mobile, customerType: c.customerType || 'Regular' }))
   }
 
   function addItem() {
@@ -59,25 +59,25 @@ export default function NewOrder() {
   }
 
   async function save() {
-    if (!form.cust_name || !form.mobile) { toast('Please fill customer details', 'danger'); return }
+    if (!form.custName || !form.mobile) { toast('Please fill customer details', 'danger'); return }
     if (items.length === 0) { toast('Add at least one item', 'danger'); return }
     setSaving(true)
     try {
-      let custId = form.cust_id ? parseInt(form.cust_id) : null
-      if (!custId && form.cust_name) {
-        const nc = await createCustomer({ name: form.cust_name, mobile: form.mobile, address: '', email: '' })
+      let custId = form.custId ? parseInt(form.custId) : null
+      if (!custId && form.custName) {
+        const nc = await createCustomer({ name: form.custName, mobile: form.mobile, address: '', email: '' })
         custId = nc.id
       }
       await createOrder({
-        cust_id: custId,
-        cust_name: form.cust_name,
+        custId: custId,
+        custName: form.custName,
         mobile: form.mobile,
-        customer_type: form.customer_type || 'Regular',
-        entry_date: form.entry_date,
-        delivery_date: form.delivery_date,
+        customerType: form.customerType || 'Regular',
+        entryDate: form.entryDate,
+        deliveryDate: form.deliveryDate,
         advance: parseFloat(form.advance) || 0,
-        pay_mode: form.pay_mode,
-        items: items.map(({ product_name, category, qty, rate, amount }) => ({ product_name, category, qty: parseInt(qty), rate: parseFloat(rate), amount: parseFloat(amount) })),
+        payMode: form.payMode,
+        items: items.map(({ product_name, category, qty, rate, amount }) => ({ productName: product_name, category, qty: parseInt(qty), rate: parseFloat(rate), amount: parseFloat(amount) })),
       })
       toast('Order saved successfully!')
       navigate('/orders')
@@ -100,11 +100,11 @@ export default function NewOrder() {
           <div className="form-row" style={{ marginBottom: 14 }}>
             <div className="form-group">
               <label>Entry Date</label>
-              <input type="date" value={form.entry_date} onChange={e => setForm(f => ({ ...f, entry_date: e.target.value }))} />
+              <input type="date" value={form.entryDate} onChange={e => setForm(f => ({ ...f, entryDate: e.target.value }))} />
             </div>
             <div className="form-group">
               <label>Expected Delivery Date</label>
-              <input type="date" value={form.delivery_date} onChange={e => setForm(f => ({ ...f, delivery_date: e.target.value }))} />
+              <input type="date" value={form.deliveryDate} onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))} />
             </div>
           </div>
           <div className="form-row" style={{ marginBottom: 14 }}>
@@ -124,11 +124,11 @@ export default function NewOrder() {
           <div className="form-row">
             <div className="form-group">
               <label>Customer Name</label>
-              <input type="text" placeholder="Customer name" value={form.cust_name} onChange={e => setForm(f => ({ ...f, cust_name: e.target.value }))} />
+              <input type="text" placeholder="Customer name" value={form.custName} onChange={e => setForm(f => ({ ...f, custName: e.target.value }))} />
             </div>
             <div className="form-group">
               <label>Customer Type</label>
-              <select value={form.customer_type} onChange={e => setForm(f => ({ ...f, customer_type: e.target.value }))}>
+              <select value={form.customerType} onChange={e => setForm(f => ({ ...f, customerType: e.target.value }))}>
                 <option>Regular</option>
                 <option>VIP</option>
                 <option>Corporate</option>
@@ -189,7 +189,7 @@ export default function NewOrder() {
             </div>
             <div className="form-group">
               <label>Payment Mode</label>
-              <select value={form.pay_mode} onChange={e => setForm(f => ({ ...f, pay_mode: e.target.value }))}>
+              <select value={form.payMode} onChange={e => setForm(f => ({ ...f, payMode: e.target.value }))}>
                 <option>Cash</option><option>UPI</option><option>Card</option><option>Credit</option>
               </select>
             </div>

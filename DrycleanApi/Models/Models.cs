@@ -132,9 +132,9 @@ public class OrderHistory
 
 public class Setting
 {
-    [Key] public string Key { get; set; } = "";
-    public int? CompanyId { get; set; }
-    public string Value { get; set; } = "";
+    [Key, Column("key")] public string Key { get; set; } = "";
+    [Column("company_id")] public int? CompanyId { get; set; }
+    [Column("value")] public string Value { get; set; } = "";
 }
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────

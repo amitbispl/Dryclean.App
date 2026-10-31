@@ -10,7 +10,7 @@ function getUser() {
 const STATUS_COLORS = { Active: '#10B981', Trial: '#3B82F6', Expired: '#EF4444', Cancelled: '#6B7280', Suspended: '#F59E0B' }
 const BILLING_COLORS = { Monthly: '#3B82F6', Yearly: '#7C3AED' }
 
-const EMPTY_FORM = { company_id: '', plan_id: '', start_date: '', end_date: '', payment_mode: 'Cash', amount_paid: 0, status: 'Active' }
+const EMPTY_FORM = { companyId: '', planId: '', startDate: '', endDate: '', paymentMode: 'Cash', amountPaid: 0, status: 'Active' }
 
 export default function Subscriptions() {
   const user = getUser()
@@ -49,19 +49,19 @@ export default function Subscriptions() {
   useEffect(() => { load() }, [])
 
   function openAdd() {
-    setForm({ ...EMPTY_FORM, start_date: new Date().toISOString().split('T')[0] })
+    setForm({ ...EMPTY_FORM, startDate: new Date().toISOString().split('T')[0] })
     setEditSub(null)
     setModal('form')
   }
 
   function openEdit(s) {
     setForm({
-      company_id: s.company_id,
-      plan_id: s.plan_id,
-      start_date: s.start_date,
-      end_date: s.end_date,
-      payment_mode: s.payment_mode,
-      amount_paid: s.amount_paid,
+      companyId: s.companyId,
+      planId: s.planId,
+      startDate: s.start_date,
+      endDate: s.end_date,
+      paymentMode: s.paymentMode,
+      amountPaid: s.amount_paid,
       status: s.status,
     })
     setEditSub(s)
@@ -69,15 +69,15 @@ export default function Subscriptions() {
   }
 
   async function save() {
-    if (!form.plan_id || !form.start_date || !form.end_date) { toast('Fill required fields', 'danger'); return }
-    if (!editSub && !form.company_id) { toast('Select a company', 'danger'); return }
+    if (!form.planId || !form.startDate || !form.endDate) { toast('Fill required fields', 'danger'); return }
+    if (!editSub && !form.companyId) { toast('Select a company', 'danger'); return }
     setSaving(true)
     try {
       if (editSub) {
-        await updateSubscription(editSub.id, { plan_id: parseInt(form.plan_id), start_date: form.start_date, end_date: form.end_date, payment_mode: form.payment_mode, amount_paid: parseFloat(form.amount_paid) || 0, status: form.status })
+        await updateSubscription(editSub.id, { planId: parseInt(form.planId), startDate: form.startDate, endDate: form.endDate, paymentMode: form.paymentMode, amountPaid: parseFloat(form.amountPaid) || 0, status: form.status })
         toast('Subscription updated')
       } else {
-        await createSubscription({ company_id: parseInt(form.company_id), plan_id: parseInt(form.plan_id), start_date: form.start_date, end_date: form.end_date, payment_mode: form.payment_mode, amount_paid: parseFloat(form.amount_paid) || 0, status: form.status })
+        await createSubscription({ companyId: parseInt(form.companyId), planId: parseInt(form.planId), startDate: form.startDate, endDate: form.endDate, paymentMode: form.paymentMode, amountPaid: parseFloat(form.amountPaid) || 0, status: form.status })
         toast('Subscription created')
       }
       setModal(null)
@@ -94,9 +94,9 @@ export default function Subscriptions() {
     const p = plans.find(x => x.id == planId)
     if (!p) return
     const d = new Date(startDate)
-    if (p.billing_cycle === 'Yearly') d.setFullYear(d.getFullYear() + 1)
+    if (p.billingCycle === 'Yearly') d.setFullYear(d.getFullYear() + 1)
     else d.setMonth(d.getMonth() + 1)
-    setForm(f => ({ ...f, end_date: d.toISOString().split('T')[0], amount_paid: p.price }))
+    setForm(f => ({ ...f, endDate: d.toISOString().split('T')[0], amountPaid: p.price }))
   }
 
   if (loading) return <div className="loading">Loading...</div>
@@ -167,7 +167,7 @@ export default function Subscriptions() {
             {plans.map(p => (
               <div key={p.id} style={{ border: p.name === s.plan ? '2px solid var(--blue)' : '1px solid var(--border)', borderRadius: 10, padding: 16, background: p.name === s.plan ? 'rgba(27,79,216,0.04)' : 'var(--surface)' }}>
                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{p.name}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--blue)', marginBottom: 4 }}>₹{p.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--gray400)' }}>/{p.billing_cycle === 'Yearly' ? 'yr' : 'mo'}</span></div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--blue)', marginBottom: 4 }}>₹{p.price}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--gray400)' }}>/{p.billingCycle === 'Yearly' ? 'yr' : 'mo'}</span></div>
                 <div style={{ fontSize: 12, color: 'var(--gray400)', marginBottom: 8 }}>{p.description}</div>
                 {p.name === s.plan && <span style={{ background: 'var(--blue)', color: '#fff', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>Active</span>}
               </div>
@@ -241,12 +241,12 @@ export default function Subscriptions() {
           {plans.map(p => (
             <div key={p.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 16, background: 'var(--surface)' }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{p.name}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--blue)', marginBottom: 4 }}>₹{p.price}<span style={{ fontSize: 11, fontWeight: 400, color: 'var(--gray400)' }}>/{p.billing_cycle === 'Yearly' ? 'yr' : 'mo'}</span></div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--blue)', marginBottom: 4 }}>₹{p.price}<span style={{ fontSize: 11, fontWeight: 400, color: 'var(--gray400)' }}>/{p.billingCycle === 'Yearly' ? 'yr' : 'mo'}</span></div>
               <div style={{ fontSize: 11, color: 'var(--gray400)', marginBottom: 6 }}>{p.description}</div>
               <div style={{ fontSize: 11 }}>
-                {p.max_orders > 0 && <div>Orders: {p.max_orders}/mo</div>}
-                {p.max_users > 0 && <div>Users: {p.max_users}</div>}
-                {p.max_orders === 0 && <div style={{ color: '#10B981' }}>Unlimited</div>}
+                {p.maxOrders > 0 && <div>Orders: {p.maxOrders}/mo</div>}
+                {p.maxUsers > 0 && <div>Users: {p.maxUsers}</div>}
+                {p.maxOrders === 0 && <div style={{ color: '#10B981' }}>Unlimited</div>}
               </div>
             </div>
           ))}
@@ -262,7 +262,7 @@ export default function Subscriptions() {
           {!editSub && (
             <div className="form-group">
               <label>Company *</label>
-              <select value={form.company_id} onChange={e => setForm(f => ({ ...f, company_id: e.target.value }))}>
+              <select value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))}>
                 <option value="">-- Select Company --</option>
                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -270,31 +270,31 @@ export default function Subscriptions() {
           )}
           <div className="form-group">
             <label>Plan *</label>
-            <select value={form.plan_id} onChange={e => { setForm(f => ({ ...f, plan_id: e.target.value })); autoEndDate(e.target.value, form.start_date) }}>
+            <select value={form.planId} onChange={e => { setForm(f => ({ ...f, planId: e.target.value })); autoEndDate(e.target.value, form.startDate) }}>
               <option value="">-- Select Plan --</option>
-              {plans.map(p => <option key={p.id} value={p.id}>{p.name} — ₹{p.price}/{p.billing_cycle === 'Yearly' ? 'yr' : 'mo'}</option>)}
+              {plans.map(p => <option key={p.id} value={p.id}>{p.name} — ₹{p.price}/{p.billingCycle === 'Yearly' ? 'yr' : 'mo'}</option>)}
             </select>
           </div>
           <div className="form-row">
             <div className="form-group">
               <label>Start Date *</label>
-              <input type="date" value={form.start_date} onChange={e => { setForm(f => ({ ...f, start_date: e.target.value })); autoEndDate(form.plan_id, e.target.value) }} />
+              <input type="date" value={form.startDate} onChange={e => { setForm(f => ({ ...f, startDate: e.target.value })); autoEndDate(form.planId, e.target.value) }} />
             </div>
             <div className="form-group">
               <label>End Date *</label>
-              <input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
+              <input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
               <label>Payment Mode</label>
-              <select value={form.payment_mode} onChange={e => setForm(f => ({ ...f, payment_mode: e.target.value }))}>
+              <select value={form.paymentMode} onChange={e => setForm(f => ({ ...f, paymentMode: e.target.value }))}>
                 <option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option>
               </select>
             </div>
             <div className="form-group">
               <label>Amount Paid (₹)</label>
-              <input type="number" value={form.amount_paid} onChange={e => setForm(f => ({ ...f, amount_paid: e.target.value }))} />
+              <input type="number" value={form.amountPaid} onChange={e => setForm(f => ({ ...f, amountPaid: e.target.value }))} />
             </div>
           </div>
           <div className="form-group">
