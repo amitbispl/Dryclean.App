@@ -39,6 +39,7 @@ public class Customer
     [Required] public string Mobile { get; set; } = "";
     public string Address { get; set; } = "";
     public string Email { get; set; } = "";
+    public string CustomerType { get; set; } = "Regular";
     public DateOnly RegDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     [JsonIgnore] public List<Order> Orders { get; set; } = new();
@@ -64,6 +65,7 @@ public class Order
     public int? CustId { get; set; }
     [Required] public string CustName { get; set; } = "";
     [Required] public string Mobile { get; set; } = "";
+    public string CustomerType { get; set; } = "Regular";
     public DateOnly EntryDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     public DateOnly DeliveryDate { get; set; }
     public decimal Total { get; set; }
@@ -75,6 +77,34 @@ public class Order
     public Customer? Customer { get; set; }
     public List<OrderItem> Items { get; set; } = new();
     public List<OrderHistory> History { get; set; } = new();
+}
+
+public class SubscriptionPlan
+{
+    public int Id { get; set; }
+    [Required] public string Name { get; set; } = "";
+    public decimal Price { get; set; }
+    public int MaxOrders { get; set; } = 0;
+    public int MaxUsers { get; set; } = 0;
+    public string Description { get; set; } = "";
+    public string BillingCycle { get; set; } = "Monthly";
+    public bool Active { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class CompanySubscription
+{
+    public int Id { get; set; }
+    public int CompanyId { get; set; }
+    public int PlanId { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+    public string Status { get; set; } = "Active";
+    public string PaymentMode { get; set; } = "Cash";
+    public decimal AmountPaid { get; set; } = 0;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [JsonIgnore] public Company? Company { get; set; }
+    public SubscriptionPlan? Plan { get; set; }
 }
 
 public class OrderItem
@@ -122,9 +152,13 @@ public record UpdateCompanyRequest(string Name, string Address, string City, str
 
 public record CreateOrderRequest(
     int? CustId, string CustName, string Mobile,
+    string CustomerType,
     string EntryDate, string DeliveryDate,
     decimal Advance, string PayMode,
     List<OrderItemDto> Items);
+
+public record CreateSubscriptionRequest(int CompanyId, int PlanId, string StartDate, string EndDate, string PaymentMode, decimal AmountPaid, string Status);
+public record UpdateSubscriptionRequest(int PlanId, string StartDate, string EndDate, string PaymentMode, decimal AmountPaid, string Status);
 
 public record OrderItemDto(string ProductName, string Category, int Qty, decimal Rate, decimal Amount);
 public record UpdateStatusRequest(string Status, string? Note, string? UpdatedBy);

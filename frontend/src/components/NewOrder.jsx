@@ -12,7 +12,7 @@ export default function NewOrder() {
   const [items, setItems] = useState([])
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
-    cust_id: '', cust_name: '', mobile: '',
+    cust_id: '', cust_name: '', mobile: '', customer_type: 'Regular',
     entry_date: today(),
     delivery_date: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
     advance: 0, pay_mode: 'Cash',
@@ -28,12 +28,12 @@ export default function NewOrder() {
 
   function onCustSelect(val) {
     if (val === 'new') {
-      setForm(f => ({ ...f, cust_id: '', cust_name: '', mobile: '' }))
+      setForm(f => ({ ...f, cust_id: '', cust_name: '', mobile: '', customer_type: 'Regular' }))
       return
     }
     if (!val) return
     const c = customers.find(x => x.id == val)
-    if (c) setForm(f => ({ ...f, cust_id: c.id, cust_name: c.name, mobile: c.mobile }))
+    if (c) setForm(f => ({ ...f, cust_id: c.id, cust_name: c.name, mobile: c.mobile, customer_type: c.customer_type || 'Regular' }))
   }
 
   function addItem() {
@@ -72,6 +72,7 @@ export default function NewOrder() {
         cust_id: custId,
         cust_name: form.cust_name,
         mobile: form.mobile,
+        customer_type: form.customer_type || 'Regular',
         entry_date: form.entry_date,
         delivery_date: form.delivery_date,
         advance: parseFloat(form.advance) || 0,
@@ -124,6 +125,15 @@ export default function NewOrder() {
             <div className="form-group">
               <label>Customer Name</label>
               <input type="text" placeholder="Customer name" value={form.cust_name} onChange={e => setForm(f => ({ ...f, cust_name: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label>Customer Type</label>
+              <select value={form.customer_type} onChange={e => setForm(f => ({ ...f, customer_type: e.target.value }))}>
+                <option>Regular</option>
+                <option>VIP</option>
+                <option>Corporate</option>
+                <option>Walk-in</option>
+              </select>
             </div>
           </div>
         </div>

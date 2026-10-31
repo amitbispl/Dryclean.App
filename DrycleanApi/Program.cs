@@ -53,6 +53,22 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Self-heal: if subscription_plans table is missing but migration shows applied, remove the
+    // history entry so Migrate() below re-applies it cleanly.
+    var conn = db.Database.GetDbConnection();
+    conn.Open();
+    using (var cmd = conn.CreateCommand())
+    {
+        cmd.CommandText = "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'subscription_plans' AND table_schema = 'public')";
+        var tableExists = (bool)(cmd.ExecuteScalar() ?? false);
+        if (!tableExists)
+        {
+            cmd.CommandText = "DELETE FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = '20261031090452_AddSubscriptionsAndCustomerType'";
+            cmd.ExecuteNonQuery();
+        }
+    }
+
     db.Database.Migrate();
 
     // Seed default company if none exists
@@ -60,7 +76,7 @@ using (var scope = app.Services.CreateScope())
     {
         var company = new Company
         {
-            Name = "DryClean Pro",
+            Name = "WashMitra",
             Address = "Shop No. 5, Main Market",
             City = "Bhilwara, Rajasthan",
             Phone = "9876543210",
@@ -93,7 +109,7 @@ using (var scope = app.Services.CreateScope())
         // Seed settings for this company
         var settings = new[]
         {
-            new Setting { Key = $"shop_name_{company.Id}", CompanyId = company.Id, Value = "DryClean Pro" },
+            new Setting { Key = $"shop_name_{company.Id}", CompanyId = company.Id, Value = "WashMitra" },
             new Setting { Key = $"shop_address_{company.Id}", CompanyId = company.Id, Value = "Shop No. 5, Main Market" },
             new Setting { Key = $"shop_city_{company.Id}", CompanyId = company.Id, Value = "Bhilwara, Rajasthan" },
             new Setting { Key = $"shop_phone_{company.Id}", CompanyId = company.Id, Value = "9876543210" },
@@ -133,6 +149,43 @@ using (var scope = app.Services.CreateScope())
         });
         db.SaveChanges();
     }
+
+    // Seed subscription plans if none exist
+    if (!db.SubscriptionPlans.Any())
+    {
+        var plans = new[]
+        {
+            new SubscriptionPlan { Name = "Free", Price = 0, MaxOrders = 50, MaxUsers = 2, Description = "Get started for free", BillingCycle = "Monthly", Active = true, CreatedAt = DateTime.UtcNow },
+            new SubscriptionPlan { Name = "Basic", Price = 999, MaxOrders = 500, MaxUsers = 5, Description = "For small shops", BillingCycle = "Monthly", Active = true, CreatedAt = DateTime.UtcNow },
+            new SubscriptionPlan { Name = "Premium", Price = 2499, MaxOrders = 0, MaxUsers = 15, Description = "Unlimited orders, 15 users", BillingCycle = "Monthly", Active = true, CreatedAt = DateTime.UtcNow },
+            new SubscriptionPlan { Name = "Enterprise", Price = 4999, MaxOrders = 0, MaxUsers = 0, Description = "Unlimited everything", BillingCycle = "Monthly", Active = true, CreatedAt = DateTime.UtcNow },
+            new SubscriptionPlan { Name = "Enterprise Yearly", Price = 14999, MaxOrders = 0, MaxUsers = 0, Description = "Best value - annual plan", BillingCycle = "Yearly", Active = true, CreatedAt = DateTime.UtcNow },
+        };
+        db.SubscriptionPlans.AddRange(plans);
+        db.SaveChanges();
+    }
+
+    // Seed trial subscription for the first company if no subscription exists
+    var firstCompany = db.Companies.FirstOrDefault();
+    if (firstCompany != null && !db.CompanySubscriptions.Any(s => s.CompanyId == firstCompany.Id))
+    {
+        var premiumPlan = db.SubscriptionPlans.FirstOrDefault(p => p.Name == "Premium");
+        if (premiumPlan != null)
+        {
+            db.CompanySubscriptions.Add(new CompanySubscription
+            {
+                CompanyId = firstCompany.Id,
+                PlanId = premiumPlan.Id,
+                StartDate = DateOnly.FromDateTime(DateTime.Today),
+                EndDate = DateOnly.FromDateTime(DateTime.Today.AddDays(30)),
+                Status = "Trial",
+                PaymentMode = "Cash",
+                AmountPaid = 0,
+                CreatedAt = DateTime.UtcNow
+            });
+            db.SaveChanges();
+        }
+    }
 }
 
 app.UseCors();
@@ -169,6 +222,22 @@ int? GetCompanyId(ClaimsPrincipal user)
 string GetRole(ClaimsPrincipal user) => user.FindFirst("role")?.Value ?? "";
 int GetUserId(ClaimsPrincipal user) => int.Parse(user.FindFirst("userId")?.Value ?? "0");
 string GetUserName(ClaimsPrincipal user) => user.FindFirst("name")?.Value ?? "Admin";
+
+async Task<IResult?> CheckSubscription(AppDbContext db, ClaimsPrincipal claims)
+{
+    var companyId = GetCompanyId(claims);
+    var role = GetRole(claims);
+    if (role == "SuperAdmin" || !companyId.HasValue) return null;
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var sub = await db.CompanySubscriptions
+        .Where(s => s.CompanyId == companyId.Value)
+        .OrderByDescending(s => s.EndDate)
+        .FirstOrDefaultAsync();
+    if (sub == null) return Results.Json(new { error = "No active subscription. Please contact admin.", expired = true }, statusCode: 403);
+    if (sub.EndDate < today || sub.Status == "Expired" || sub.Status == "Cancelled")
+        return Results.Json(new { error = "Subscription expired. Please renew.", expired = true }, statusCode: 403);
+    return null;
+}
 
 // ─── HEALTH ───────────────────────────────────────────────────────────────────
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
@@ -382,6 +451,7 @@ app.MapPut("/api/customers/{id:int}", async (AppDbContext db, ClaimsPrincipal cl
     if (c is null) return Results.NotFound();
     if (companyId.HasValue && c.CompanyId != companyId) return Results.Forbid();
     c.Name = input.Name; c.Mobile = input.Mobile; c.Address = input.Address; c.Email = input.Email;
+    c.CustomerType = input.CustomerType ?? c.CustomerType;
     await db.SaveChangesAsync();
     return Results.Ok(c);
 }).RequireAuthorization();
@@ -471,6 +541,7 @@ app.MapPost("/api/orders", async (AppDbContext db, ClaimsPrincipal claims, Creat
         CustId = req.CustId,
         CustName = req.CustName,
         Mobile = req.Mobile,
+        CustomerType = req.CustomerType ?? "Regular",
         EntryDate = DateOnly.Parse(req.EntryDate),
         DeliveryDate = DateOnly.Parse(req.DeliveryDate),
         Total = total,
@@ -606,6 +677,99 @@ app.MapPut("/api/settings", async (AppDbContext db, ClaimsPrincipal claims, Sett
     }
     await db.SaveChangesAsync();
     return Results.Ok(input);
+}).RequireAuthorization();
+
+// ─── SUBSCRIPTIONS ────────────────────────────────────────────────────────────
+app.MapGet("/api/subscriptions/plans", async (AppDbContext db) =>
+{
+    var plans = await db.SubscriptionPlans.Where(p => p.Active).OrderBy(p => p.Price).ToListAsync();
+    return Results.Ok(plans);
+});
+
+app.MapGet("/api/subscriptions/status", async (AppDbContext db, ClaimsPrincipal claims) =>
+{
+    var companyId = GetCompanyId(claims);
+    if (!companyId.HasValue) return Results.Ok(new { status = "SuperAdmin", plan = "Unlimited" });
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var sub = await db.CompanySubscriptions.Include(s => s.Plan)
+        .Where(s => s.CompanyId == companyId.Value)
+        .OrderByDescending(s => s.EndDate)
+        .FirstOrDefaultAsync();
+    if (sub == null) return Results.Ok(new { status = "None", plan = (string?)null, end_date = (string?)null, days_remaining = 0 });
+    var daysRemaining = Math.Max(0, sub.EndDate.DayNumber - today.DayNumber);
+    var effectiveStatus = sub.EndDate < today ? "Expired" : sub.Status;
+    return Results.Ok(new {
+        status = effectiveStatus,
+        plan = sub.Plan?.Name,
+        billing_cycle = sub.Plan?.BillingCycle,
+        end_date = sub.EndDate.ToString("yyyy-MM-dd"),
+        days_remaining = daysRemaining,
+        max_orders = sub.Plan?.MaxOrders ?? 0,
+        max_users = sub.Plan?.MaxUsers ?? 0,
+        price = sub.Plan?.Price ?? 0
+    });
+}).RequireAuthorization();
+
+app.MapGet("/api/subscriptions/company/{id:int}", async (AppDbContext db, ClaimsPrincipal claims, int id) =>
+{
+    var role = GetRole(claims);
+    var companyId = GetCompanyId(claims);
+    if (role != "SuperAdmin" && companyId != id) return Results.Forbid();
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var sub = await db.CompanySubscriptions.Include(s => s.Plan)
+        .Where(s => s.CompanyId == id)
+        .OrderByDescending(s => s.EndDate)
+        .FirstOrDefaultAsync();
+    if (sub == null) return Results.NotFound(new { message = "No subscription found" });
+    return Results.Ok(sub);
+}).RequireAuthorization();
+
+app.MapGet("/api/subscriptions", async (AppDbContext db, ClaimsPrincipal claims) =>
+{
+    if (GetRole(claims) != "SuperAdmin") return Results.Forbid();
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var subs = await db.CompanySubscriptions.Include(s => s.Plan).Include(s => s.Company)
+        .OrderByDescending(s => s.CreatedAt).ToListAsync();
+    var result = subs.Select(s => new {
+        s.Id, s.CompanyId, company_name = s.Company?.Name,
+        s.PlanId, plan_name = s.Plan?.Name, billing_cycle = s.Plan?.BillingCycle,
+        start_date = s.StartDate.ToString("yyyy-MM-dd"),
+        end_date = s.EndDate.ToString("yyyy-MM-dd"),
+        effective_status = s.EndDate < today ? "Expired" : s.Status,
+        s.Status, s.PaymentMode, s.AmountPaid,
+        days_remaining = Math.Max(0, s.EndDate.DayNumber - today.DayNumber)
+    });
+    return Results.Ok(result);
+}).RequireAuthorization();
+
+app.MapPost("/api/subscriptions", async (AppDbContext db, ClaimsPrincipal claims, CreateSubscriptionRequest req) =>
+{
+    if (GetRole(claims) != "SuperAdmin") return Results.Forbid();
+    var sub = new CompanySubscription
+    {
+        CompanyId = req.CompanyId, PlanId = req.PlanId,
+        StartDate = DateOnly.Parse(req.StartDate), EndDate = DateOnly.Parse(req.EndDate),
+        Status = req.Status, PaymentMode = req.PaymentMode, AmountPaid = req.AmountPaid,
+        CreatedAt = DateTime.UtcNow
+    };
+    db.CompanySubscriptions.Add(sub);
+    await db.SaveChangesAsync();
+    return Results.Created($"/api/subscriptions/{sub.Id}", sub);
+}).RequireAuthorization();
+
+app.MapPut("/api/subscriptions/{id:int}", async (AppDbContext db, ClaimsPrincipal claims, int id, UpdateSubscriptionRequest req) =>
+{
+    if (GetRole(claims) != "SuperAdmin") return Results.Forbid();
+    var sub = await db.CompanySubscriptions.FindAsync(id);
+    if (sub is null) return Results.NotFound();
+    sub.PlanId = req.PlanId;
+    sub.StartDate = DateOnly.Parse(req.StartDate);
+    sub.EndDate = DateOnly.Parse(req.EndDate);
+    sub.Status = req.Status;
+    sub.PaymentMode = req.PaymentMode;
+    sub.AmountPaid = req.AmountPaid;
+    await db.SaveChangesAsync();
+    return Results.Ok(sub);
 }).RequireAuthorization();
 
 app.Run();

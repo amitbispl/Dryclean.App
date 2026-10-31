@@ -32,7 +32,8 @@ export default function Billing() {
     hr{border:none;border-top:1px dashed #ccc;margin:8px 0}
     .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px}</style>
     </head><body>
-    <h2>🧺 DryClean Pro</h2>
+    <div style="text-align:center"><img src="/logo.jpg" style="height:40px;object-fit:contain" /></div>
+    <h2>WashMitra</h2>
     <p style="text-align:center;font-size:11px">Tax Invoice</p>
     <hr>
     <div class="row"><span>Invoice No:</span><strong>${detail.id}</strong></div>
@@ -95,7 +96,8 @@ export default function Billing() {
         {detail && (
           <div className="receipt">
             <div className="receipt-logo">
-              <h2>🧺 DryClean Pro</h2>
+              <img src="/logo.jpg" alt="WashMitra" style={{ height: 40, objectFit: 'contain', display: 'block', margin: '0 auto 4px' }} />
+              <h2>WashMitra</h2>
               <p>Tax Invoice</p>
             </div>
             <hr className="receipt-divider" />

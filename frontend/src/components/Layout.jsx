@@ -13,7 +13,7 @@ const pageTitles = {
   '/': 'Dashboard', '/new-order': 'New Order', '/orders': 'All Orders',
   '/status': 'Order Status', '/delivery': 'Delivery Management', '/reports': 'Sales Report',
   '/billing': 'Billing', '/products': 'Products', '/customers': 'Customers',
-  '/settings': 'Settings', '/users': 'Users', '/companies': 'Companies'
+  '/settings': 'Settings', '/users': 'Users', '/companies': 'Companies', '/subscriptions': 'Subscriptions'
 }
 
 export default function Layout({ children, overdueCnt = 0 }) {
@@ -24,7 +24,7 @@ export default function Layout({ children, overdueCnt = 0 }) {
   const isSuperAdmin = user.role === 'SuperAdmin'
 
   const dateStr = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
-  const title = pageTitles[location.pathname] || 'DryClean Pro'
+  const title = pageTitles[location.pathname] || 'WashMitra'
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -48,8 +48,8 @@ export default function Layout({ children, overdueCnt = 0 }) {
       <div className={`sidebar-overlay${sidebarOpen ? ' open' : ''}`} onClick={() => setSidebarOpen(false)} />
       <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
         <div className="logo">
-          <div className="logo-mark">🧺</div>
-          <div className="logo-name">{user.companyName || 'DryClean Pro'}</div>
+          <img src="/logo.jpg" alt="WashMitra" style={{ height: 36, objectFit: 'contain', marginBottom: 4 }} />
+          <div className="logo-name">{user.companyName || 'WashMitra'}</div>
           <div className="logo-sub">Management System</div>
         </div>
 
@@ -78,6 +78,7 @@ export default function Layout({ children, overdueCnt = 0 }) {
           <NavItem path="/customers" label="Customers" icon={<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>} />
           <NavItem path="/users" label="Users" icon={<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>} />
           {isSuperAdmin && <NavItem path="/companies" label="Companies" icon={<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>} />}
+          <NavItem path="/subscriptions" label="Subscriptions" icon={<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>} />
           <NavItem path="/settings" label="Settings" icon={<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>} />
         </div>
 

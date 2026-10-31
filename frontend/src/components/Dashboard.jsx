@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDashboardStats } from '../api/client'
+import { getDashboardStats, getSubscriptionStatus } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass, catBadgeClass, today } from '../utils'
 
 const STATUS_COLORS = { Received: '#1B4FD8', Processing: '#F59E0B', Completed: '#0BA5A4', Packing: '#7C3AED', Ready: '#10B981', Delivered: '#374151', Cancelled: '#EF4444' }
@@ -8,10 +8,12 @@ const STATUS_COLORS = { Received: '#1B4FD8', Processing: '#F59E0B', Completed: '
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [subStatus, setSubStatus] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
     getDashboardStats().then(setStats).catch(console.error).finally(() => setLoading(false))
+    getSubscriptionStatus().then(setSubStatus).catch(() => {})
   }, [])
 
   if (loading) return <div className="loading">Loading dashboard...</div>
@@ -19,8 +21,32 @@ export default function Dashboard() {
 
   const dueOrders = stats.recent_orders?.filter(o => o.status !== 'Delivered' && o.status !== 'Cancelled' && o.delivery_date < today()) || []
 
+  const showSubWarning = subStatus && subStatus.status !== 'SuperAdmin' && subStatus.status !== 'None' &&
+    (subStatus.status === 'Expired' || subStatus.days_remaining <= 7)
+
   return (
     <>
+      {showSubWarning && (
+        <div style={{
+          background: subStatus.status === 'Expired' ? '#FEF2F2' : '#FFFBEB',
+          border: `1px solid ${subStatus.status === 'Expired' ? '#FCA5A5' : '#FCD34D'}`,
+          borderRadius: 8, padding: '10px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 18 }}>{subStatus.status === 'Expired' ? '🔴' : '⚠️'}</span>
+            <span style={{ fontWeight: 600, color: subStatus.status === 'Expired' ? '#DC2626' : '#B45309', fontSize: 14 }}>
+              {subStatus.status === 'Expired'
+                ? 'Subscription expired. Please renew to continue.'
+                : `Subscription expiring in ${subStatus.days_remaining} day${subStatus.days_remaining !== 1 ? 's' : ''} (${subStatus.plan}).`}
+            </span>
+          </div>
+          <button className="btn btn-sm" onClick={() => navigate('/subscriptions')}
+            style={{ background: subStatus.status === 'Expired' ? '#DC2626' : '#D97706', color: '#fff', border: 'none' }}>
+            {subStatus.status === 'Expired' ? 'Renew Now' : 'View Plan'}
+          </button>
+        </div>
+      )}
       <div className="stat-grid">
         <div className="stat-card">
           <div className="stat-icon si-blue">

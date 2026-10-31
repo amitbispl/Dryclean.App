@@ -67,4 +67,12 @@ export const getDeliveryReport = (params = {}) => api.get('/reports/delivery', {
 export const getSettings = () => api.get('/settings').then(r => r.data)
 export const updateSettings = (data) => api.put('/settings', data).then(r => r.data)
 
+// ─── SUBSCRIPTIONS ──────────────────────────────────────────────────────────
+export const getSubscriptionPlans = () => api.get('/subscriptions/plans').then(r => r.data)
+export const getSubscriptionStatus = () => api.get('/subscriptions/status').then(r => r.data)
+export const getAllSubscriptions = () => api.get('/subscriptions').then(r => r.data)
+export const getCompanySubscription = (id) => api.get(`/subscriptions/company/${id}`).then(r => r.data)
+export const createSubscription = (data) => api.post('/subscriptions', data).then(r => r.data)
+export const updateSubscription = (id, data) => api.put(`/subscriptions/${id}`, data).then(r => r.data)
+
 export default api

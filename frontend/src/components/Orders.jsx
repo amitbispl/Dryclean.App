@@ -110,7 +110,8 @@ export default function Orders() {
         {detailOrder && (
           <div className="receipt">
             <div className="receipt-logo">
-              <h2>🧺 DryClean Pro</h2>
+              <img src="/logo.jpg" alt="WashMitra" style={{ height: 40, objectFit: 'contain', display: 'block', margin: '0 auto 4px' }} />
+              <h2>WashMitra</h2>
               <p>Order Receipt</p>
             </div>
             <hr className="receipt-divider" />

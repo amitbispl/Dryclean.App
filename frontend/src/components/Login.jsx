@@ -32,8 +32,8 @@ export default function Login() {
       <div style={{ width: '100%', maxWidth: 400 }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 48, lineHeight: 1 }}>🧺</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#0D1B4B', marginTop: 8 }}>DryClean Pro</h1>
+          <img src="/logo.jpg" alt="WashMitra" style={{ height: 60, objectFit: 'contain', marginBottom: 4 }} />
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#0D1B4B', marginTop: 8 }}>WashMitra</h1>
           <p style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>Management System</p>
         </div>
 

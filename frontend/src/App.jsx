@@ -13,6 +13,7 @@ import Customers from './components/Customers'
 import Settings from './components/Settings'
 import Users from './components/Users'
 import Companies from './components/Companies'
+import Subscriptions from './components/Subscriptions'
 import Login from './components/Login'
 import { ToastProvider } from './components/Toast'
 import { getOrders } from './api/client'
@@ -71,6 +72,7 @@ function AppRoutes() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/users" element={<Users />} />
               {user.role === 'SuperAdmin' && <Route path="/companies" element={<Companies />} />}
+              <Route path="/subscriptions" element={<Subscriptions />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>

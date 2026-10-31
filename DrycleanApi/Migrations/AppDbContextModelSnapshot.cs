@@ -135,6 +135,66 @@ namespace DrycleanApi.Migrations
                     b.ToTable("companies", (string)null);
                 });
 
+            modelBuilder.Entity("DrycleanApi.Models.CompanySubscription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AmountPaid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(10,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("amount_paid");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("integer")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<string>("PaymentMode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Cash")
+                        .HasColumnName("payment_mode");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("integer")
+                        .HasColumnName("plan_id");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Active")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("PlanId");
+
+                    b.ToTable("company_subscriptions", (string)null);
+                });
+
             modelBuilder.Entity("DrycleanApi.Models.Customer", b =>
                 {
                     b.Property<int>("Id")
@@ -158,6 +218,14 @@ namespace DrycleanApi.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Regular")
+                        .HasColumnName("customer_type");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -222,6 +290,14 @@ namespace DrycleanApi.Migrations
 
                     b.Property<int?>("CustomerId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("CustomerType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Regular")
+                        .HasColumnName("customer_type");
 
                     b.Property<DateOnly>("DeliveryDate")
                         .HasColumnType("date")
@@ -423,6 +499,65 @@ namespace DrycleanApi.Migrations
                     b.ToTable("settings", (string)null);
                 });
 
+            modelBuilder.Entity("DrycleanApi.Models.SubscriptionPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<string>("BillingCycle")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Monthly")
+                        .HasColumnName("billing_cycle");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("")
+                        .HasColumnName("description");
+
+                    b.Property<int>("MaxOrders")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("max_orders");
+
+                    b.Property<int>("MaxUsers")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("max_users");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("price");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("subscription_plans", (string)null);
+                });
+
             modelBuilder.Entity("DrycleanApi.Models.AppUser", b =>
                 {
                     b.HasOne("DrycleanApi.Models.Company", "Company")
@@ -431,6 +566,25 @@ namespace DrycleanApi.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("DrycleanApi.Models.CompanySubscription", b =>
+                {
+                    b.HasOne("DrycleanApi.Models.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DrycleanApi.Models.SubscriptionPlan", "Plan")
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Plan");
                 });
 
             modelBuilder.Entity("DrycleanApi.Models.Order", b =>
