@@ -1,0 +1,15 @@
+# .NET
+DrycleanApi/bin/
+DrycleanApi/obj/
+DrycleanApi/*.user
+DrycleanApi/appsettings.Development.json
+DrycleanApi/appsettings.json
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Misc
+*.log
+.env

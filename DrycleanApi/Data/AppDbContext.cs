@@ -7,6 +7,8 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    public DbSet<Company> Companies => Set<Company>();
+    public DbSet<AppUser> Users => Set<AppUser>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Order> Orders => Set<Order>();
@@ -16,10 +18,39 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
+        mb.Entity<Company>(e => {
+            e.ToTable("companies");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").UseIdentityAlwaysColumn();
+            e.Property(x => x.Name).HasColumnName("name").HasMaxLength(100);
+            e.Property(x => x.Address).HasColumnName("address").HasDefaultValue("");
+            e.Property(x => x.City).HasColumnName("city").HasDefaultValue("");
+            e.Property(x => x.Phone).HasColumnName("phone").HasDefaultValue("");
+            e.Property(x => x.Email).HasColumnName("email").HasDefaultValue("");
+            e.Property(x => x.Active).HasColumnName("active");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.HasMany(x => x.Users).WithOne(u => u.Company).HasForeignKey(u => u.CompanyId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        mb.Entity<AppUser>(e => {
+            e.ToTable("app_users");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id").UseIdentityAlwaysColumn();
+            e.Property(x => x.CompanyId).HasColumnName("company_id");
+            e.Property(x => x.Name).HasColumnName("name").HasMaxLength(100);
+            e.Property(x => x.Username).HasColumnName("username").HasMaxLength(50);
+            e.Property(x => x.PasswordHash).HasColumnName("password_hash");
+            e.Property(x => x.Role).HasColumnName("role").HasMaxLength(20);
+            e.Property(x => x.Active).HasColumnName("active");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.HasIndex(x => x.Username).IsUnique();
+        });
+
         mb.Entity<Customer>(e => {
             e.ToTable("customers");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").UseIdentityAlwaysColumn();
+            e.Property(x => x.CompanyId).HasColumnName("company_id");
             e.Property(x => x.Name).HasColumnName("name").HasMaxLength(100);
             e.Property(x => x.Mobile).HasColumnName("mobile").HasMaxLength(15);
             e.Property(x => x.Address).HasColumnName("address").HasDefaultValue("");
@@ -32,6 +63,7 @@ public class AppDbContext : DbContext
             e.ToTable("products");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").UseIdentityAlwaysColumn();
+            e.Property(x => x.CompanyId).HasColumnName("company_id");
             e.Property(x => x.Name).HasColumnName("name").HasMaxLength(100);
             e.Property(x => x.Category).HasColumnName("category").HasMaxLength(20);
             e.Property(x => x.Price).HasColumnName("price").HasColumnType("numeric(10,2)");
@@ -44,6 +76,7 @@ public class AppDbContext : DbContext
             e.ToTable("orders");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasColumnName("id").HasMaxLength(20);
+            e.Property(x => x.CompanyId).HasColumnName("company_id");
             e.Property(x => x.CustId).HasColumnName("cust_id");
             e.Property(x => x.CustName).HasColumnName("cust_name").HasMaxLength(100);
             e.Property(x => x.Mobile).HasColumnName("mobile").HasMaxLength(15);
@@ -86,36 +119,9 @@ public class AppDbContext : DbContext
             e.ToTable("settings");
             e.HasKey(x => x.Key);
             e.Property(x => x.Key).HasColumnName("key").HasMaxLength(50);
+            e.Property(x => x.CompanyId).HasColumnName("company_id");
             e.Property(x => x.Value).HasColumnName("value");
         });
-
-        // Seed products
-        mb.Entity<Product>().HasData(
-            new Product { Id = 1, Name = "Shirt", Category = "Dry Clean", Price = 100, Emoji = "👔" },
-            new Product { Id = 2, Name = "Pant", Category = "Dry Clean", Price = 100, Emoji = "👖" },
-            new Product { Id = 3, Name = "Coat", Category = "Dry Clean", Price = 300, Emoji = "🧥" },
-            new Product { Id = 4, Name = "Saree", Category = "Dry Clean", Price = 200, Emoji = "👘" },
-            new Product { Id = 5, Name = "Blanket", Category = "Dry Clean", Price = 250, Emoji = "🛏️" },
-            new Product { Id = 6, Name = "Kurta", Category = "Dry Clean", Price = 80, Emoji = "👗" },
-            new Product { Id = 7, Name = "Shirt Repair", Category = "Rafu", Price = 50, Emoji = "🪡" },
-            new Product { Id = 8, Name = "Pant Repair", Category = "Rafu", Price = 60, Emoji = "🪡" },
-            new Product { Id = 9, Name = "Button Change", Category = "Rafu", Price = 20, Emoji = "🔘" },
-            new Product { Id = 10, Name = "Zip Change", Category = "Rafu", Price = 40, Emoji = "🔗" },
-            new Product { Id = 11, Name = "Shirt Stitching", Category = "Charak", Price = 150, Emoji = "✂️" },
-            new Product { Id = 12, Name = "Pant Alteration", Category = "Charak", Price = 100, Emoji = "✂️" },
-            new Product { Id = 13, Name = "Length Change", Category = "Charak", Price = 80, Emoji = "📏" }
-        );
-
-        // Seed settings
-        mb.Entity<Setting>().HasData(
-            new Setting { Key = "shop_name", Value = "DryClean Pro" },
-            new Setting { Key = "shop_address", Value = "Shop No. 5, Main Market" },
-            new Setting { Key = "shop_city", Value = "Bhilwara, Rajasthan" },
-            new Setting { Key = "shop_phone", Value = "9876543210" },
-            new Setting { Key = "whatsapp", Value = "false" },
-            new Setting { Key = "barcode", Value = "false" },
-            new Setting { Key = "sms", Value = "false" }
-        );
 
         mb.HasSequence<long>("order_num_seq").StartsAt(10001).IncrementsBy(1);
     }

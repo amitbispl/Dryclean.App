@@ -4,9 +4,37 @@ using System.Text.Json.Serialization;
 
 namespace DrycleanApi.Models;
 
+public class Company
+{
+    public int Id { get; set; }
+    [Required] public string Name { get; set; } = "";
+    public string Address { get; set; } = "";
+    public string City { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public string Email { get; set; } = "";
+    public bool Active { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [JsonIgnore] public List<AppUser> Users { get; set; } = new();
+}
+
+public class AppUser
+{
+    public int Id { get; set; }
+    public int? CompanyId { get; set; }
+    [Required] public string Name { get; set; } = "";
+    [Required] public string Username { get; set; } = "";
+    [JsonIgnore] public string PasswordHash { get; set; } = "";
+    [Required] public string Role { get; set; } = "Counter";
+    public bool Active { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [JsonIgnore] public Company? Company { get; set; }
+    [NotMapped] public string? CompanyName { get; set; }
+}
+
 public class Customer
 {
     public int Id { get; set; }
+    public int? CompanyId { get; set; }
     [Required] public string Name { get; set; } = "";
     [Required] public string Mobile { get; set; } = "";
     public string Address { get; set; } = "";
@@ -20,6 +48,7 @@ public class Customer
 public class Product
 {
     public int Id { get; set; }
+    public int? CompanyId { get; set; }
     [Required] public string Name { get; set; } = "";
     [Required] public string Category { get; set; } = "Dry Clean";
     public decimal Price { get; set; }
@@ -31,6 +60,7 @@ public class Product
 public class Order
 {
     public string Id { get; set; } = "";
+    public int? CompanyId { get; set; }
     public int? CustId { get; set; }
     [Required] public string CustName { get; set; } = "";
     [Required] public string Mobile { get; set; } = "";
@@ -73,10 +103,23 @@ public class OrderHistory
 public class Setting
 {
     [Key] public string Key { get; set; } = "";
+    public int? CompanyId { get; set; }
     public string Value { get; set; } = "";
 }
 
-// DTOs
+// ─── DTOs ────────────────────────────────────────────────────────────────────
+
+public record LoginRequest(string Username, string Password);
+public record LoginResponse(string Token, UserInfo User);
+public record UserInfo(int Id, string Name, string Username, string Role, int? CompanyId, string? CompanyName);
+
+public record CreateUserRequest(string Name, string Username, string Password, string Role, int? CompanyId);
+public record UpdateUserRequest(string Name, string Username, string Role, bool Active);
+public record ChangePasswordRequest(string NewPassword);
+
+public record CreateCompanyRequest(string Name, string Address, string City, string Phone, string Email);
+public record UpdateCompanyRequest(string Name, string Address, string City, string Phone, string Email, bool Active);
+
 public record CreateOrderRequest(
     int? CustId, string CustName, string Mobile,
     string EntryDate, string DeliveryDate,
@@ -84,7 +127,6 @@ public record CreateOrderRequest(
     List<OrderItemDto> Items);
 
 public record OrderItemDto(string ProductName, string Category, int Qty, decimal Rate, decimal Amount);
-
 public record UpdateStatusRequest(string Status, string? Note, string? UpdatedBy);
 
 public record SettingsDto(
