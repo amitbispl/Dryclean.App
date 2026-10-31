@@ -41,7 +41,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:4173", "https://localhost:63891")
+        policy.WithOrigins(
+                  "http://localhost:5173", "http://localhost:3000", "http://localhost:4173", "https://localhost:63891",
+                  "https://washmitra.bisplindia.in", "https://washmitraapi.bisplindia.in")
               .AllowAnyMethod()
               .AllowAnyHeader());
 });
