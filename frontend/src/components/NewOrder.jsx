@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCustomers, getProducts, createOrder, createCustomer } from '../api/client'
-import { today } from '../utils'
+import { today, fmtDate, fmtMoney } from '../utils'
 import { useToast } from './Toast'
+import { loadPrintSettings } from '../utils/printSettings'
+import { buildEscPosReceipt, printBluetooth, printUSB } from '../utils/printUtils'
 
 export default function NewOrder() {
   const navigate = useNavigate()
@@ -68,7 +70,7 @@ export default function NewOrder() {
         const nc = await createCustomer({ name: form.custName, mobile: form.mobile, address: '', email: '' })
         custId = nc.id
       }
-      await createOrder({
+      const order = await createOrder({
         custId: custId,
         custName: form.custName,
         mobile: form.mobile,
@@ -80,11 +82,67 @@ export default function NewOrder() {
         items: items.map(({ product_name, category, qty, rate, amount }) => ({ productName: product_name, category, qty: parseInt(qty), rate: parseFloat(rate), amount: parseFloat(amount) })),
       })
       toast('Order saved successfully!')
+      await autoPrintOrder(order)
       navigate('/orders')
     } catch (e) {
       toast(e.response?.data?.error || 'Failed to save order', 'danger')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function autoPrintOrder(order) {
+    const cfg = loadPrintSettings()
+    if (!cfg.autoPrint) return
+
+    const detail = {
+      ...order,
+      items: order.items || items.map(({ product_name, qty, amount }) => ({ productName: product_name, qty, amount })),
+    }
+
+    try {
+      if (cfg.defaultMode === 'bluetooth') {
+        const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        await printBluetooth(data)
+      } else if (cfg.defaultMode === 'usb') {
+        const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        await printUSB(data)
+      } else {
+        // Normal browser print
+        const { paperSize, showLogo, footerText, copies } = cfg
+        const pageW = paperSize === '58' ? '58mm' : '80mm'
+        const logoHtml = showLogo ? `<div style="text-align:center"><img src="/logo.jpg" style="height:40px;object-fit:contain" /></div>` : ''
+        const copyCount = Math.max(1, Math.min(3, Number(copies) || 1))
+        let bodyHtml = ''
+        for (let c = 0; c < copyCount; c++) {
+          bodyHtml += `<div style="${c > 0 ? 'page-break-before:always' : ''}">
+            ${logoHtml}<h2 style="text-align:center">WashMitra</h2>
+            <p style="text-align:center;font-size:11px">Tax Invoice</p><hr>
+            <div class="row"><span>Invoice No:</span><strong>${detail.id}</strong></div>
+            <div class="row"><span>Date:</span><span>${fmtDate(detail.entryDate)}</span></div>
+            <div class="row"><span>Customer:</span><span>${detail.custName}</span></div>
+            <div class="row"><span>Mobile:</span><span>${detail.mobile}</span></div>
+            <div class="row"><span>Delivery:</span><span>${fmtDate(detail.deliveryDate)}</span></div><hr>
+            ${(detail.items || []).map(i => `<div class="row"><span>${i.productName} \xd7${i.qty}</span><span>₹${i.amount}</span></div>`).join('')}
+            <hr>
+            <div class="row"><span>Total:</span><strong>₹${detail.total}</strong></div>
+            <div class="row"><span>Advance:</span><span>₹${detail.advance}</span></div>
+            <div class="total"><span>Balance Due:</span><span>₹${detail.balance}</span></div>
+            <p style="text-align:center;font-size:10px;margin-top:10px">${footerText}</p>
+          </div>`
+        }
+        const w = window.open('', '_blank')
+        w.document.write(`<html><head><title>Invoice ${detail.id}</title>
+          <style>body{font-family:Arial;max-width:${pageW};margin:10px auto;font-size:12px}
+          h2{font-size:16px}.row{display:flex;justify-content:space-between;padding:3px 0}
+          .total{background:#000;color:#fff;padding:8px;display:flex;justify-content:space-between;font-weight:700}
+          hr{border:none;border-top:1px dashed #ccc;margin:8px 0}
+          @media print{@page{size:${pageW} auto;margin:4mm}}</style>
+          </head><body>${bodyHtml}
+          <script>window.print();window.close();<\/script></body></html>`)
+      }
+    } catch {
+      // silent — don't block navigation on print error
     }
   }
 
