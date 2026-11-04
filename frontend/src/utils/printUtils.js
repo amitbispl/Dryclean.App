@@ -4,38 +4,69 @@ const ESC = 0x1B
 const GS  = 0x1D
 const LF  = 0x0A
 
+// Strip characters the printer ROM can't render.
+// ₹ (U+20B9) encodes as 3 UTF-8 bytes the printer shows as garbage — replace with Rs.
+// Any other non-ASCII becomes '?'
+function sanitize(text) {
+  return String(text || '')
+    .replace(/₹/g, 'Rs.')
+    .replace(/[^\x00-\x7F]/g, '?')
+}
+
 function makeHelpers(width) {
+  // Two-column: label left, value right-aligned.
+  // If value is too long to share a line with the label, prints label then
+  // value indented on the next line so nothing ever wraps mid-word.
   const twoCol = (left, right) => {
-    const r = String(right)
-    const l = String(left).slice(0, width - r.length - 1)
-    return l.padEnd(width - r.length, ' ') + r
+    const l = sanitize(left)
+    const r = sanitize(right)
+    if (l.length + 1 + r.length <= width) {
+      return l.padEnd(width - r.length, ' ') + r
+    }
+    // Value too long — put it on its own next line, right-aligned
+    return l + '\n' + r.padStart(width, ' ')
   }
   const centerText = (text) => {
-    const t = String(text).slice(0, width)
+    const t = sanitize(text).slice(0, width)
     const pad = Math.floor((width - t.length) / 2)
     return ' '.repeat(pad) + t
   }
   const divider = (char = '-') => char.repeat(width)
-  return { twoCol, centerText, divider }
+  // Fixed 2-column with explicit label width (safe for long values)
+  const fixedCol = (label, value, labelW = 12) => {
+    const l = sanitize(label).padEnd(labelW, ' ').slice(0, labelW)
+    const v = sanitize(value).slice(0, width - labelW)
+    return l + v
+  }
+  return { twoCol, centerText, divider, fixedCol }
+}
+
+// Encode a plain ASCII string to bytes (safe for thermal ROM)
+function encode(text) {
+  const bytes = []
+  for (let i = 0; i < text.length; i++) {
+    bytes.push(text.charCodeAt(i) & 0xFF)
+  }
+  bytes.push(LF)
+  return bytes
 }
 
 // Build ESC/POS byte array for the receipt
 // settings: { paperSize: '58'|'80', copies: '1'|'2'|'3', footerText: string }
 export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
   const paperSize = settings.paperSize || '80'
-  const WIDTH = paperSize === '58' ? 32 : 42
-  const footerText = settings.footerText || 'Thank you! Visit again!'
+  // 58mm → 30 chars (safe for most 58mm printers; some fit 32 but 30 never wraps)
+  // 80mm → 42 chars
+  const WIDTH = paperSize === '58' ? 30 : 42
+  const footerText = sanitize(settings.footerText || 'Thank you! Visit again!')
   const copies = Math.max(1, Math.min(3, Number(settings.copies) || 1))
 
-  const { twoCol, centerText, divider } = makeHelpers(WIDTH)
+  const { twoCol, centerText, divider, fixedCol } = makeHelpers(WIDTH)
   const all = []
 
   for (let c = 0; c < copies; c++) {
     const lines = []
-    const addLine = (text) => {
-      const encoded = new TextEncoder().encode(text + '\n')
-      encoded.forEach(b => lines.push(b))
-    }
+    const addLine = (text) => encode(sanitize(text)).forEach(b => lines.push(b))
 
     lines.push(ESC, 0x40)              // Init printer
     lines.push(ESC, 0x61, 0x01)        // Center align
@@ -46,28 +77,32 @@ export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
     addLine(divider('='))
 
     lines.push(ESC, 0x61, 0x00)        // Left align
-    addLine(twoCol('Invoice No:', detail.id))
-    addLine(twoCol('Date:', fmtDate(detail.entryDate)))
-    addLine(twoCol('Customer:', detail.custName))
-    addLine(twoCol('Mobile:', detail.mobile))
-    addLine(twoCol('Delivery:', fmtDate(detail.deliveryDate)))
+    // Use fixedCol for the header block so long names never wrap mid-word
+    addLine(fixedCol('Invoice No:', detail.id))
+    addLine(fixedCol('Date:', fmtDate(detail.entryDate)))
+    addLine(fixedCol('Customer:', detail.custName))
+    addLine(fixedCol('Mobile:', detail.mobile))
+    addLine(fixedCol('Delivery:', fmtDate(detail.deliveryDate)))
     addLine(divider())
 
     ;(detail.items || []).forEach(it => {
-      addLine(twoCol(`${it.productName} x${it.qty}`, fmtMoney(it.amount)))
+      // Item lines: "Product x2        Rs.800"
+      const label = sanitize(`${it.productName} x${it.qty}`)
+      const amt   = sanitize(fmtMoney(it.amount))
+      addLine(twoCol(label, amt))
     })
 
     addLine(divider())
     lines.push(ESC, 0x45, 0x01)
-    addLine(twoCol('Total:', fmtMoney(detail.total)))
+    addLine(twoCol('Total:', sanitize(fmtMoney(detail.total))))
     lines.push(ESC, 0x45, 0x00)
-    addLine(twoCol('Advance:', fmtMoney(detail.advance)))
+    addLine(twoCol('Advance:', sanitize(fmtMoney(detail.advance))))
     addLine(divider('='))
     lines.push(ESC, 0x45, 0x01)
-    addLine(twoCol('Balance Due:', fmtMoney(detail.balance)))
+    addLine(twoCol('Balance Due:', sanitize(fmtMoney(detail.balance))))
     lines.push(ESC, 0x45, 0x00)
     addLine(divider('='))
-    addLine('Payment: ' + (detail.payMode || ''))
+    addLine('Payment: ' + sanitize(detail.payMode || ''))
     lines.push(LF)
     lines.push(ESC, 0x61, 0x01)        // Center
     addLine(footerText)
