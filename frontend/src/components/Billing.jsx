@@ -29,16 +29,49 @@ export default function Billing() {
   }
 
   function openPrintOptions() {
-    setPrintCfg(loadPrintSettings())   // pick up any changes saved in Settings
+    setPrintCfg(loadPrintSettings())
     setPrintStatus('')
     setPrintError('')
     setPrintModal(true)
   }
 
-  // Normal browser print (desktop/network printers)
-  function printNormal() {
+  // Called by the main Print button — goes directly to the saved default mode
+  async function handlePrint() {
+    const cfg = loadPrintSettings()
+    setPrintCfg(cfg)
+    if (cfg.defaultMode === 'bluetooth') {
+      setPrintModal(true)
+      setPrintStatus('printing')
+      setPrintError('')
+      try {
+        const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        await printBluetooth(data)
+        setPrintStatus('done')
+      } catch (e) {
+        setPrintStatus('error')
+        setPrintError(e.message || 'Bluetooth print failed')
+      }
+    } else if (cfg.defaultMode === 'usb') {
+      setPrintModal(true)
+      setPrintStatus('printing')
+      setPrintError('')
+      try {
+        const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        await printUSB(data)
+        setPrintStatus('done')
+      } catch (e) {
+        setPrintStatus('error')
+        setPrintError(e.message || 'USB print failed')
+      }
+    } else {
+      // normal — open print window directly, no modal needed
+      printNormalWith(cfg)
+    }
+  }
+
+  function printNormalWith(cfg) {
     if (!detail) return
-    const { paperSize, showLogo, footerText, copies } = printCfg
+    const { paperSize, showLogo, footerText, copies } = cfg
     const pageW = paperSize === '58' ? '58mm' : '80mm'
     const logoHtml = showLogo ? `<div style="text-align:center"><img src="/logo.jpg" style="height:40px;object-fit:contain" /></div>` : ''
     const copyCount = Math.max(1, Math.min(3, Number(copies) || 1))
@@ -81,6 +114,8 @@ export default function Billing() {
     <script>window.print();window.close();<\/script></body></html>`)
     setPrintModal(false)
   }
+
+  function printNormal() { printNormalWith(printCfg) }
 
   async function doPrintBluetooth() {
     setPrintStatus('printing')
@@ -146,10 +181,18 @@ export default function Billing() {
 
       <Modal open={!!detail} title={`Invoice — ${detail?.id}`} onClose={() => setDetail(null)}
         footer={<>
-          <button className="btn btn-primary" onClick={openPrintOptions}>
-            <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Print
-          </button>
+          <div style={{ display: 'flex', gap: 2 }}>
+            <button className="btn btn-primary" style={{ borderRadius: '7px 0 0 7px' }} onClick={handlePrint}>
+              <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Print
+            </button>
+            <button className="btn btn-primary" style={{ borderRadius: '0 7px 7px 0', padding: '7px 9px', borderLeft: '1px solid rgba(255,255,255,.25)' }}
+              title="More print options" onClick={openPrintOptions}>
+              <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: 'currentColor', fill: 'none', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round' }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+          </div>
           <button className="btn btn-outline" onClick={() => setDetail(null)}>Close</button>
         </>}>
         {detail && (
@@ -193,10 +236,13 @@ export default function Billing() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
           {/* Current settings summary */}
-          <div style={{ padding: '8px 12px', background: 'var(--gray50)', borderRadius: 8, fontSize: 12, color: 'var(--gray600)', display: 'flex', gap: 16 }}>
+          <div style={{ padding: '8px 12px', background: 'var(--gray50)', borderRadius: 8, fontSize: 12, color: 'var(--gray600)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <span>Paper: <strong>{printCfg.paperSize}mm</strong></span>
             <span>Copies: <strong>{printCfg.copies}</strong></span>
             <span>Logo: <strong>{printCfg.showLogo ? 'On' : 'Off'}</strong></span>
+            <span style={{ marginLeft: 'auto', color: 'var(--blue)', fontWeight: 600 }}>
+              Default: {printCfg.defaultMode === 'bluetooth' ? 'Bluetooth' : printCfg.defaultMode === 'usb' ? 'USB/OTG' : 'Normal'}
+            </span>
           </div>
 
           {/* Normal Print */}
