@@ -2,12 +2,18 @@ import { useState, useEffect } from 'react'
 import { getOrders, getOrder } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass } from '../utils'
 import Modal from './Modal'
+import { buildEscPosReceipt, printBluetooth, printUSB } from '../utils/printUtils'
+import { loadPrintSettings } from '../utils/printSettings'
 
 export default function Billing() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [detail, setDetail] = useState(null)
+  const [printModal, setPrintModal] = useState(false)
+  const [printStatus, setPrintStatus] = useState('')   // '', 'printing', 'done', 'error'
+  const [printError, setPrintError] = useState('')
+  const [printCfg, setPrintCfg] = useState(loadPrintSettings)
 
   useEffect(() => {
     getOrders().then(setOrders).finally(() => setLoading(false))
@@ -22,34 +28,84 @@ export default function Billing() {
     setDetail(o)
   }
 
-  function printBill() {
+  function openPrintOptions() {
+    setPrintCfg(loadPrintSettings())   // pick up any changes saved in Settings
+    setPrintStatus('')
+    setPrintError('')
+    setPrintModal(true)
+  }
+
+  // Normal browser print (desktop/network printers)
+  function printNormal() {
     if (!detail) return
+    const { paperSize, showLogo, footerText, copies } = printCfg
+    const pageW = paperSize === '58' ? '58mm' : '80mm'
+    const logoHtml = showLogo ? `<div style="text-align:center"><img src="/logo.jpg" style="height:40px;object-fit:contain" /></div>` : ''
+    const copyCount = Math.max(1, Math.min(3, Number(copies) || 1))
+
+    let bodyHtml = ''
+    for (let c = 0; c < copyCount; c++) {
+      bodyHtml += `
+      <div class="copy" style="${c > 0 ? 'page-break-before:always' : ''}">
+        ${logoHtml}
+        <h2>WashMitra</h2>
+        <p style="text-align:center;font-size:11px">Tax Invoice</p>
+        <hr>
+        <div class="row"><span>Invoice No:</span><strong>${detail.id}</strong></div>
+        <div class="row"><span>Date:</span><span>${fmtDate(detail.entryDate)}</span></div>
+        <div class="row"><span>Customer:</span><span>${detail.custName}</span></div>
+        <div class="row"><span>Mobile:</span><span>${detail.mobile}</span></div>
+        <div class="row"><span>Delivery:</span><span>${fmtDate(detail.deliveryDate)}</span></div>
+        <hr>
+        ${(detail.items || []).map(i => `<div class="row"><span>${i.productName} \xd7${i.qty}</span><span>₹${i.amount}</span></div>`).join('')}
+        <hr>
+        <div class="row"><span>Subtotal:</span><strong>₹${detail.total}</strong></div>
+        <div class="row"><span>Advance Paid:</span><span>₹${detail.advance}</span></div>
+        <div class="total"><span>Balance Due:</span><span>₹${detail.balance}</span></div>
+        <p style="text-align:center;margin-top:14px;font-size:11px">Payment: ${detail.payMode}</p>
+        <p style="text-align:center;font-size:10px">${footerText}</p>
+      </div>`
+    }
+
     const w = window.open('', '_blank')
     w.document.write(`<html><head><title>Invoice ${detail.id}</title>
-    <style>body{font-family:Arial;max-width:320px;margin:20px auto;font-size:12px}
-    h2{text-align:center;font-size:16px}.row{display:flex;justify-content:space-between;padding:3px 0}
-    .total{background:#000;color:#fff;padding:8px;display:flex;justify-content:space-between;font-weight:700}
-    hr{border:none;border-top:1px dashed #ccc;margin:8px 0}
-    .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px}</style>
-    </head><body>
-    <div style="text-align:center"><img src="/logo.jpg" style="height:40px;object-fit:contain" /></div>
-    <h2>WashMitra</h2>
-    <p style="text-align:center;font-size:11px">Tax Invoice</p>
-    <hr>
-    <div class="row"><span>Invoice No:</span><strong>${detail.id}</strong></div>
-    <div class="row"><span>Date:</span><span>${fmtDate(detail.entryDate)}</span></div>
-    <div class="row"><span>Customer:</span><span>${detail.custName}</span></div>
-    <div class="row"><span>Mobile:</span><span>${detail.mobile}</span></div>
-    <div class="row"><span>Delivery:</span><span>${fmtDate(detail.deliveryDate)}</span></div>
-    <hr>
-    ${(detail.items || []).map(i => `<div class="row"><span>${i.productName} ×${i.qty}</span><span>₹${i.amount}</span></div>`).join('')}
-    <hr>
-    <div class="row"><span>Subtotal:</span><strong>₹${detail.total}</strong></div>
-    <div class="row"><span>Advance Paid:</span><span>₹${detail.advance}</span></div>
-    <div class="total"><span>Balance Due:</span><span>₹${detail.balance}</span></div>
-    <p style="text-align:center;margin-top:14px;font-size:11px">Payment Mode: ${detail.payMode}</p>
-    <p style="text-align:center;font-size:10px">Thank you! 🙏</p>
+    <style>
+      body{font-family:Arial;max-width:${pageW};margin:10px auto;font-size:12px}
+      h2{text-align:center;font-size:16px}
+      .row{display:flex;justify-content:space-between;padding:3px 0}
+      .total{background:#000;color:#fff;padding:8px;display:flex;justify-content:space-between;font-weight:700}
+      hr{border:none;border-top:1px dashed #ccc;margin:8px 0}
+      @media print{@page{size:${pageW} auto;margin:4mm}}
+    </style>
+    </head><body>${bodyHtml}
     <script>window.print();window.close();<\/script></body></html>`)
+    setPrintModal(false)
+  }
+
+  async function doPrintBluetooth() {
+    setPrintStatus('printing')
+    setPrintError('')
+    try {
+      const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, printCfg)
+      await printBluetooth(data)
+      setPrintStatus('done')
+    } catch (e) {
+      setPrintStatus('error')
+      setPrintError(e.message || 'Bluetooth print failed')
+    }
+  }
+
+  async function doPrintUSB() {
+    setPrintStatus('printing')
+    setPrintError('')
+    try {
+      const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, printCfg)
+      await printUSB(data)
+      setPrintStatus('done')
+    } catch (e) {
+      setPrintStatus('error')
+      setPrintError(e.message || 'USB print failed')
+    }
   }
 
   if (loading) return <div className="loading">Loading...</div>
@@ -90,7 +146,10 @@ export default function Billing() {
 
       <Modal open={!!detail} title={`Invoice — ${detail?.id}`} onClose={() => setDetail(null)}
         footer={<>
-          <button className="btn btn-primary" onClick={printBill}>🖨️ Print Invoice</button>
+          <button className="btn btn-primary" onClick={openPrintOptions}>
+            <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
           <button className="btn btn-outline" onClick={() => setDetail(null)}>Close</button>
         </>}>
         {detail && (
@@ -117,6 +176,81 @@ export default function Billing() {
             <div style={{ marginTop: 10, fontSize: 11, color: 'var(--gray400)' }}>Payment: {detail.payMode}</div>
           </div>
         )}
+      </Modal>
+
+      {/* Print Options Modal */}
+      <Modal open={printModal} title="Print Options" onClose={() => setPrintModal(false)}
+        footer={<>
+          <a href="/settings" className="btn btn-outline" style={{ fontSize: 12 }}
+            onClick={() => setPrintModal(false)}>
+            <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, stroke: 'currentColor', fill: 'none', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }}>
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            Print Settings
+          </a>
+          <button className="btn btn-outline" onClick={() => setPrintModal(false)}>Cancel</button>
+        </>}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+          {/* Current settings summary */}
+          <div style={{ padding: '8px 12px', background: 'var(--gray50)', borderRadius: 8, fontSize: 12, color: 'var(--gray600)', display: 'flex', gap: 16 }}>
+            <span>Paper: <strong>{printCfg.paperSize}mm</strong></span>
+            <span>Copies: <strong>{printCfg.copies}</strong></span>
+            <span>Logo: <strong>{printCfg.showLogo ? 'On' : 'Off'}</strong></span>
+          </div>
+
+          {/* Normal Print */}
+          <button className="btn btn-outline" style={{ justifyContent: 'flex-start', padding: '12px 16px', textAlign: 'left' }} onClick={printNormal}>
+            <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, flexShrink: 0, stroke: 'var(--blue)', fill: 'none', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }}>
+              <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            <div>
+              <div style={{ fontWeight: 700 }}>Normal Print</div>
+              <div style={{ fontSize: 11, color: 'var(--gray400)', marginTop: 2 }}>Desktop / network printer via browser</div>
+            </div>
+          </button>
+
+          {/* USB / OTG Print */}
+          <button className="btn btn-outline" style={{ justifyContent: 'flex-start', padding: '12px 16px', textAlign: 'left' }}
+            onClick={doPrintUSB} disabled={printStatus === 'printing'}>
+            <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, flexShrink: 0, stroke: 'var(--teal)', fill: 'none', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }}>
+              <path d="M12 22V8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/><path d="M12 2v4"/><path d="M9 5h6"/>
+            </svg>
+            <div>
+              <div style={{ fontWeight: 700 }}>USB / OTG Thermal Print</div>
+              <div style={{ fontSize: 11, color: 'var(--gray400)', marginTop: 2 }}>USB thermal printer via OTG cable (Chrome required)</div>
+            </div>
+          </button>
+
+          {/* Bluetooth Print */}
+          <button className="btn btn-outline" style={{ justifyContent: 'flex-start', padding: '12px 16px', textAlign: 'left' }}
+            onClick={doPrintBluetooth} disabled={printStatus === 'printing'}>
+            <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, flexShrink: 0, stroke: 'var(--purple)', fill: 'none', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }}>
+              <polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/>
+            </svg>
+            <div>
+              <div style={{ fontWeight: 700 }}>Bluetooth Thermal Print</div>
+              <div style={{ fontSize: 11, color: 'var(--gray400)', marginTop: 2 }}>BLE thermal printer (Chrome on Android / Desktop)</div>
+            </div>
+          </button>
+
+          {/* Status feedback */}
+          {printStatus === 'printing' && (
+            <div style={{ padding: '10px 14px', background: 'var(--blue-lt)', borderRadius: 8, fontSize: 13, color: 'var(--blue)' }}>
+              Sending to printer...
+            </div>
+          )}
+          {printStatus === 'done' && (
+            <div style={{ padding: '10px 14px', background: 'var(--green-lt)', borderRadius: 8, fontSize: 13, color: 'var(--green)' }}>
+              Printed successfully!
+            </div>
+          )}
+          {printStatus === 'error' && (
+            <div style={{ padding: '10px 14px', background: 'var(--red-lt)', borderRadius: 8, fontSize: 13, color: 'var(--red)' }}>
+              {printError}
+            </div>
+          )}
+        </div>
       </Modal>
     </>
   )

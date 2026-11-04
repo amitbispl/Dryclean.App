@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import { getSettings, updateSettings } from '../api/client'
 import { useToast } from './Toast'
+import { loadPrintSettings, savePrintSettings } from '../utils/printSettings'
 
 export default function Settings() {
   const [form, setForm] = useState({ shopName: '', shopAddress: '', shopCity: '', shopPhone: '', whatsapp: false, barcode: false, sms: false })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [printCfg, setPrintCfg] = useState(() => loadPrintSettings())
+  const [printSaved, setPrintSaved] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -19,6 +22,16 @@ export default function Settings() {
       toast('Settings saved successfully!')
     } catch { toast('Failed to save', 'danger') }
     finally { setSaving(false) }
+  }
+
+  function savePrint() {
+    savePrintSettings(printCfg)
+    setPrintSaved(true)
+    setTimeout(() => setPrintSaved(false), 2000)
+  }
+
+  function setPrint(key, value) {
+    setPrintCfg(p => ({ ...p, [key]: value }))
   }
 
   const toggles = [
@@ -70,6 +83,65 @@ export default function Settings() {
             <div className={`toggle${form[t.key] ? ' on' : ''}`} onClick={() => setForm(f => ({ ...f, [t.key]: !f[t.key] }))} />
           </div>
         ))}
+      </div>
+
+      <div className="settings-section">
+        <h3>Print Settings</h3>
+        <div className="form-grid">
+          <div className="form-row">
+            <div className="form-group">
+              <label>Paper Size</label>
+              <select value={printCfg.paperSize} onChange={e => setPrint('paperSize', e.target.value)}>
+                <option value="58">58 mm (narrow thermal)</option>
+                <option value="80">80 mm (standard thermal)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Default Print Mode</label>
+              <select value={printCfg.defaultMode} onChange={e => setPrint('defaultMode', e.target.value)}>
+                <option value="normal">Normal (browser / desktop printer)</option>
+                <option value="usb">USB / OTG Thermal</option>
+                <option value="bluetooth">Bluetooth Thermal</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Number of Copies</label>
+              <select value={printCfg.copies} onChange={e => setPrint('copies', e.target.value)}>
+                <option value="1">1 copy</option>
+                <option value="2">2 copies</option>
+                <option value="3">3 copies</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Receipt Footer Text</label>
+              <input type="text" value={printCfg.footerText} onChange={e => setPrint('footerText', e.target.value)} placeholder="Thank you! Visit again!" />
+            </div>
+          </div>
+        </div>
+
+        <div className="toggle-row" style={{ marginTop: 10 }}>
+          <div className="toggle-info">
+            <p>Show Logo on Receipt</p>
+            <span>Print shop logo at the top of each receipt</span>
+          </div>
+          <div className={`toggle${printCfg.showLogo ? ' on' : ''}`} onClick={() => setPrint('showLogo', !printCfg.showLogo)} />
+        </div>
+
+        <div className="toggle-row">
+          <div className="toggle-info">
+            <p>Auto-Print on New Order</p>
+            <span>Automatically open print dialog after saving a new order</span>
+          </div>
+          <div className={`toggle${printCfg.autoPrint ? ' on' : ''}`} onClick={() => setPrint('autoPrint', !printCfg.autoPrint)} />
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+          <button className="btn btn-success" onClick={savePrint}>
+            {printSaved ? '✓ Saved!' : '✓ Save Print Settings'}
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
