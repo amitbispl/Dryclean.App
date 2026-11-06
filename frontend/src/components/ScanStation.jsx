@@ -51,20 +51,22 @@ export default function ScanStation() {
   }, [cameraOn])
 
   async function handleScan(raw) {
-    if (!raw.trim() || cooldownRef.current) return
-    setLastRaw(raw.trim())
+    // Strip ESC/POS code-set prefix {B/{A/{C if printer included it in barcode output
+    const cleaned = raw.trim().replace(/^\{[A-Ca-c]/, '')
+    if (!cleaned || cooldownRef.current) return
+    setLastRaw(cleaned)
     cooldownRef.current = true
     setTimeout(() => { cooldownRef.current = false }, 1500)
 
     // Mobile number search: 10 digits
-    if (/^\d{10}$/.test(raw.trim())) {
+    if (/^\d{10}$/.test(cleaned)) {
       setLoading(true)
       setOrder(null)
       setMobileResults([])
       try {
-        const results = await getOrders({ search: raw.trim() })
+        const results = await getOrders({ search: cleaned })
         if (results.length === 0) {
-          toast(`No orders found for mobile ${raw.trim()}`, 'danger')
+          toast(`No orders found for mobile ${cleaned}`, 'danger')
           if (navigator.vibrate) navigator.vibrate([80, 40, 80])
         } else if (results.length === 1) {
           await loadOrder(results[0].id)
@@ -82,7 +84,7 @@ export default function ScanStation() {
     }
 
     // Barcode format "DC10003-9876543210" — extract order ID before the first dash
-    const full = raw.trim().toUpperCase()
+    const full = cleaned.toUpperCase()
     const id = full.includes('-') ? full.split('-')[0] : full
     if (!id) return
 
@@ -122,7 +124,10 @@ export default function ScanStation() {
   }
 
   function onKeyDown(e) {
-    if (e.key === 'Enter') handleScan(inputVal)
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      handleScan(inputVal)
+    }
   }
 
   // ── Camera scanning via BarcodeDetector API (Chrome 83+) ────────────────

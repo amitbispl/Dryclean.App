@@ -59,14 +59,18 @@ function barcodeCommands(orderId, mobile, paperSize) {
   const value = (!is58 && mobile)
     ? `${sanitize(orderId)}-${sanitize(mobile)}`
     : sanitize(orderId)
-  const data = `{B${value}`   // {B = select code set B
   const bytes = []
   bytes.push(ESC, 0x61, 0x01)   // center
   bytes.push(GS, 0x48, 0x02)    // HRI text below
-  bytes.push(GS, 0x68, is58 ? 80 : 60)  // height: taller on 58mm for easier scanning
-  bytes.push(GS, 0x77, is58 ? 3 : 2)   // module width: 3 on 58mm (thicker bars), 2 on 80mm
-  bytes.push(GS, 0x6B, 73, data.length & 0xFF, (data.length >> 8) & 0xFF)
-  for (let i = 0; i < data.length; i++) bytes.push(data.charCodeAt(i) & 0xFF)
+  bytes.push(GS, 0x68, is58 ? 80 : 60)  // height
+  bytes.push(GS, 0x77, is58 ? 3 : 2)    // module width
+
+  // Try CODE39 (Function 1) — universally supported by all thermal printers,
+  // no code-set prefix needed, DC10014 uses only valid CODE39 chars (A-Z, 0-9, dash)
+  bytes.push(GS, 0x6B, 4)  // GS k type=4 → CODE39, Function 1 (NUL-terminated)
+  for (let i = 0; i < value.length; i++) bytes.push(value.charCodeAt(i) & 0xFF)
+  bytes.push(0x00)  // NUL terminator
+
   bytes.push(LF)
   bytes.push(ESC, 0x61, 0x00)   // back to left
   return bytes
