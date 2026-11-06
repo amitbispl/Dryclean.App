@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getOrder, updateOrderStatus } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass } from '../utils'
 import { useToast } from './Toast'
+import { buildEscPosTag, printBrowserTag, printBluetooth, printUSB } from '../utils/printUtils'
+import { loadPrintSettings } from '../utils/printSettings'
 
 const STATUS_FLOW = ['Received', 'Processing', 'Completed', 'Packing', 'Ready', 'Delivered', 'Cancelled']
 const TERMINAL = ['Delivered', 'Cancelled']
@@ -14,6 +16,7 @@ export default function ScanStation() {
   const [cameraOn, setCameraOn]     = useState(false)
   const [cameraErr, setCameraErr]   = useState('')
   const [scanFlash, setScanFlash]   = useState(false) // green flash on scan
+  const [deliveryMode, setDeliveryMode] = useState(false)
   const toast = useToast()
 
   const inputRef    = useRef(null)
@@ -56,6 +59,13 @@ export default function ScanStation() {
       setScanFlash(true)
       setTimeout(() => setScanFlash(false), 600)
       if (navigator.vibrate) navigator.vibrate(80)
+
+      // Delivery mode: auto-mark as Delivered if not already terminal
+      if (deliveryMode && !['Delivered', 'Cancelled'].includes(o.status)) {
+        await updateOrderStatus(o.id, { status: 'Delivered', note: 'Auto-delivered via scan', updatedBy: 'Scan' })
+        setOrder(prev => prev ? { ...prev, status: 'Delivered' } : prev)
+        toast(`${o.id} marked Delivered`)
+      }
     } catch {
       toast(`Order "${id}" not found`, 'danger')
       if (navigator.vibrate) navigator.vibrate([80, 40, 80])
@@ -148,6 +158,23 @@ export default function ScanStation() {
     }
   }
 
+  async function printTag(o) {
+    const settings = loadPrintSettings()
+    try {
+      if (settings.defaultMode === 'bluetooth') {
+        const data = buildEscPosTag(o, fmtDate, settings)
+        await printBluetooth(data)
+      } else if (settings.defaultMode === 'usb') {
+        const data = buildEscPosTag(o, fmtDate, settings)
+        await printUSB(data)
+      } else {
+        printBrowserTag(o, fmtDate)
+      }
+    } catch (e) {
+      toast('Print tag failed: ' + (e.message || 'Error'), 'danger')
+    }
+  }
+
   const nextStatuses = STATUS_FLOW.filter(s => order && s !== order.status)
 
   // ── Status button color map ───────────────────────────────────────────────
@@ -164,6 +191,23 @@ export default function ScanStation() {
           <h2>Scan Station</h2>
           <p>Scan order barcode to view and update status</p>
         </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+          <div style={{
+            width: 44, height: 24, borderRadius: 12, background: deliveryMode ? 'var(--green)' : 'var(--gray200)',
+            position: 'relative', transition: 'background .2s', flexShrink: 0,
+          }}>
+            <div style={{
+              position: 'absolute', top: 2, left: deliveryMode ? 22 : 2, width: 20, height: 20,
+              borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,.3)',
+              transition: 'left .2s',
+            }} />
+            <input type="checkbox" checked={deliveryMode} onChange={e => setDeliveryMode(e.target.checked)}
+              style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: deliveryMode ? 'var(--green)' : 'var(--gray500)' }}>
+            {deliveryMode ? 'Delivery Mode ON' : 'Delivery Mode OFF'}
+          </span>
+        </label>
       </div>
 
       {/* Scanner input */}
@@ -299,7 +343,10 @@ export default function ScanStation() {
             </div>
           )}
 
-          <div style={{ padding: '10px 20px', borderTop: '1px solid var(--gray100)', textAlign: 'right' }}>
+          <div style={{ padding: '10px 20px', borderTop: '1px solid var(--gray100)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <button className="btn btn-outline btn-sm" onClick={() => printTag(order)}>
+              Print Tag
+            </button>
             <button className="btn btn-outline btn-sm" onClick={() => { setOrder(null); inputRef.current?.focus() }}>
               Clear · Scan Next
             </button>

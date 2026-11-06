@@ -3,6 +3,8 @@ import { getOrders, getOrder, updateOrderStatus } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass, today } from '../utils'
 import Modal from './Modal'
 import { useToast } from './Toast'
+import { buildEscPosTag, printBrowserTag, printBluetooth, printUSB } from '../utils/printUtils'
+import { loadPrintSettings } from '../utils/printSettings'
 
 const STATUS_FLOW = ['Received','Processing','Completed','Packing','Ready','Delivered','Cancelled']
 
@@ -34,6 +36,23 @@ export default function Orders() {
       const o = await getOrder(id)
       setDetailOrder(o)
     } catch { toast('Failed to load order', 'danger') }
+  }
+
+  async function printTag(o) {
+    const settings = loadPrintSettings()
+    try {
+      if (settings.defaultMode === 'bluetooth') {
+        const data = buildEscPosTag(o, fmtDate, settings)
+        await printBluetooth(data)
+      } else if (settings.defaultMode === 'usb') {
+        const data = buildEscPosTag(o, fmtDate, settings)
+        await printUSB(data)
+      } else {
+        printBrowserTag(o, fmtDate)
+      }
+    } catch (e) {
+      toast('Print tag failed: ' + (e.message || 'Error'), 'danger')
+    }
   }
 
   async function doUpdateStatus() {
@@ -103,6 +122,7 @@ export default function Orders() {
       {/* Detail Modal */}
       <Modal open={!!detailOrder} title={`Order — ${detailOrder?.id}`} onClose={() => setDetailOrder(null)}
         footer={<>
+          <button className="btn btn-outline" onClick={() => detailOrder && printTag(detailOrder)}>Print Tag</button>
           {detailOrder?.status !== 'Delivered' && detailOrder?.status !== 'Cancelled' &&
             <button className="btn btn-primary" onClick={() => { setStatusModal(detailOrder); setDetailOrder(null); setNewStatus('') }}>Update Status</button>}
           <button className="btn btn-outline" onClick={() => setDetailOrder(null)}>Close</button>

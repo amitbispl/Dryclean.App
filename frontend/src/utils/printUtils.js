@@ -250,3 +250,105 @@ export async function printUSB(data) {
   await device.releaseInterface(interfaceNumber)
   await device.close()
 }
+
+// --- Packing Tag (compact label to attach to clothes bag) ---
+
+export function buildEscPosTag(detail, fmtDate, settings = {}) {
+  const paperSize = settings.paperSize || '80'
+  const WIDTH = paperSize === '58' ? 30 : 42
+  const { centerText, divider, fixedCol } = makeHelpers(WIDTH)
+  const lines = []
+  const addLine = (text) => encode(sanitize(text)).forEach(b => lines.push(b))
+
+  lines.push(ESC, 0x40)              // Init
+  lines.push(ESC, 0x61, 0x01)        // Center
+  lines.push(ESC, 0x45, 0x01)        // Bold ON
+  addLine('WashMitra — PACKING TAG')
+  lines.push(ESC, 0x45, 0x00)        // Bold OFF
+  addLine(divider('='))
+
+  lines.push(ESC, 0x61, 0x00)        // Left
+  // Large order ID
+  lines.push(ESC, 0x21, 0x30)        // Double width+height
+  addLine(centerText(detail.id || ''))
+  lines.push(ESC, 0x21, 0x00)        // Normal
+
+  addLine(fixedCol('Customer:', detail.custName))
+  addLine(fixedCol('Mobile:', detail.mobile))
+  addLine(fixedCol('Delivery:', fmtDate(detail.deliveryDate)))
+
+  if ((detail.items || []).length > 0) {
+    addLine(divider())
+    detail.items.forEach(it => {
+      addLine(sanitize(`${it.productName} x${it.qty}`))
+    })
+  }
+
+  addLine(divider('='))
+
+  // Barcode
+  if (detail.id) {
+    barcodeCommands(detail.id, detail.mobile).forEach(b => lines.push(b))
+    lines.push(LF)
+  }
+
+  lines.push(LF, LF)
+  lines.push(GS, 0x56, 0x01)        // Partial cut
+
+  return new Uint8Array(lines)
+}
+
+export function printBrowserTag(detail, fmtDate) {
+  const barcodeValue = detail.mobile
+    ? `${detail.id}-${detail.mobile}`
+    : detail.id
+
+  const itemsHtml = (detail.items || [])
+    .map(it => `<div class="item">${it.productName} &times;${it.qty}</div>`)
+    .join('')
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Packing Tag — ${detail.id}</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+<style>
+  @page { size: 58mm auto; margin: 2mm; }
+  body { font-family: 'Courier New', monospace; font-size: 11px; margin: 0; padding: 4px; width: 54mm; }
+  h1 { font-size: 13px; text-align: center; margin: 0 0 2px; }
+  .sub { text-align: center; font-size: 10px; border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 6px; }
+  .order-id { font-size: 22px; font-weight: 900; text-align: center; letter-spacing: 1px; margin: 4px 0; }
+  .row { display: flex; justify-content: space-between; margin: 1px 0; }
+  .label { color: #555; }
+  .divider { border-top: 1px dashed #000; margin: 4px 0; }
+  .item { font-size: 10px; }
+  svg { display: block; margin: 4px auto; }
+</style>
+</head>
+<body>
+<h1>WashMitra</h1>
+<div class="sub">PACKING TAG</div>
+<div class="order-id">${detail.id}</div>
+<div class="row"><span class="label">Customer:</span><span>${detail.custName || ''}</span></div>
+<div class="row"><span class="label">Mobile:</span><span>${detail.mobile || ''}</span></div>
+<div class="row"><span class="label">Delivery:</span><span>${fmtDate(detail.deliveryDate)}</span></div>
+${itemsHtml ? `<div class="divider"></div>${itemsHtml}` : ''}
+<div class="divider"></div>
+<svg id="bc"></svg>
+<script>
+  JsBarcode('#bc', '${barcodeValue}', {
+    format: 'CODE128', width: 1.5, height: 40,
+    displayValue: true, fontSize: 10, margin: 2,
+  });
+  window.onload = () => window.print();
+<\/script>
+</body>
+</html>`
+
+  const win = window.open('', '_blank', 'width=400,height=600')
+  if (win) {
+    win.document.write(html)
+    win.document.close()
+  }
+}
