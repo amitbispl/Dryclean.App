@@ -19,6 +19,7 @@ export default function ScanStation() {
   const [deliveryMode, setDeliveryMode] = useState(false)
   const [mobileResults, setMobileResults] = useState([])
   const [shopName, setShopName] = useState('')
+  const [testModal, setTestModal] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
@@ -217,6 +218,23 @@ export default function ScanStation() {
     }
   }
 
+  function showTestBarcode() {
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Test Barcode</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+    <style>body{font-family:Arial;text-align:center;padding:30px;background:#fff}
+    h2{margin-bottom:4px}p{color:#666;font-size:13px;margin:4px 0 20px}
+    svg{display:block;margin:0 auto}</style></head>
+    <body><h2>Scanner Test Barcode</h2>
+    <p>Scan this with your scanner — if the order loads, it's working!</p>
+    <svg id="bc"></svg>
+    <p style="margin-top:16px;font-size:12px;color:#999">Value: DC10001</p>
+    <script>JsBarcode('#bc','DC10001',{format:'CODE128',width:3,height:100,displayValue:true,fontSize:14,margin:20});<\/script>
+    </body></html>`
+    const w = window.open('', '_blank', 'width=500,height=380')
+    if (w) { w.document.write(html); w.document.close() }
+  }
+
   const nextStatuses = STATUS_FLOW.filter(s => order && s !== order.status)
 
   // ── Status button color map ───────────────────────────────────────────────
@@ -294,6 +312,9 @@ export default function ScanStation() {
                 </button>
             }
             {cameraErr && <span style={{ fontSize: 12, color: 'var(--red)' }}>{cameraErr}</span>}
+            <button className="btn btn-outline btn-sm" onClick={showTestBarcode} title="Open a test barcode to verify your scanner">
+              Test Scanner
+            </button>
             <span style={{ fontSize: 12, color: 'var(--gray400)', marginLeft: 'auto' }}>
               Keyboard / BT scanner: just scan — input is always ready
             </span>
