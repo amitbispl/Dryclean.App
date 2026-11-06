@@ -63,8 +63,8 @@ function barcodeCommands(orderId, mobile, paperSize) {
   const bytes = []
   bytes.push(ESC, 0x61, 0x01)   // center
   bytes.push(GS, 0x48, 0x02)    // HRI text below
-  bytes.push(GS, 0x68, 60)      // height 60 dots
-  bytes.push(GS, 0x77, is58 ? 2 : 2)  // module width 2 (fits on 80mm; order-only fits 58mm)
+  bytes.push(GS, 0x68, is58 ? 80 : 60)  // height: taller on 58mm for easier scanning
+  bytes.push(GS, 0x77, is58 ? 3 : 2)   // module width: 3 on 58mm (thicker bars), 2 on 80mm
   bytes.push(GS, 0x6B, 73, data.length & 0xFF, (data.length >> 8) & 0xFF)
   for (let i = 0; i < data.length; i++) bytes.push(data.charCodeAt(i) & 0xFF)
   bytes.push(LF)
