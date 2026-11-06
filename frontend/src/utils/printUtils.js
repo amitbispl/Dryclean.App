@@ -51,14 +51,29 @@ function encode(text) {
   return bytes
 }
 
+// ESC/POS CODE128 barcode command
+// GS k 73 nL nH {B<data>  (CODE128, code-set B — all printable ASCII)
+function barcodeCommands(orderId) {
+  const data = `{B${sanitize(orderId)}`   // {B = select code set B
+  const bytes = []
+  bytes.push(ESC, 0x61, 0x01)   // center
+  bytes.push(GS, 0x48, 0x02)    // HRI text below
+  bytes.push(GS, 0x68, 60)      // height 60 dots
+  bytes.push(GS, 0x77, 2)       // module width 2
+  bytes.push(GS, 0x6B, 73, data.length & 0xFF, (data.length >> 8) & 0xFF)
+  for (let i = 0; i < data.length; i++) bytes.push(data.charCodeAt(i) & 0xFF)
+  bytes.push(LF)
+  bytes.push(ESC, 0x61, 0x00)   // back to left
+  return bytes
+}
+
 // Build ESC/POS byte array for the receipt
-// settings: { paperSize: '58'|'80', copies: '1'|'2'|'3', footerText: string }
+// settings: { paperSize: '58'|'80', copies: '1'|'2'|'3', footerText: string, barcode: bool }
 export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
   const paperSize = settings.paperSize || '80'
-  // 58mm → 30 chars (safe for most 58mm printers; some fit 32 but 30 never wraps)
-  // 80mm → 42 chars
   const WIDTH = paperSize === '58' ? 30 : 42
   const footerText = sanitize(settings.footerText || 'Thank you! Visit again!')
+  const printBarcode = settings.barcode !== false   // on by default
   const copies = Math.max(1, Math.min(3, Number(settings.copies) || 1))
 
   const { twoCol, centerText, divider, fixedCol } = makeHelpers(WIDTH)
@@ -104,6 +119,13 @@ export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
     addLine(divider('='))
     addLine('Payment: ' + sanitize(detail.payMode || ''))
     lines.push(LF)
+
+    // Barcode (CODE128 of order ID)
+    if (printBarcode && detail.id) {
+      barcodeCommands(detail.id).forEach(b => lines.push(b))
+      lines.push(LF)
+    }
+
     lines.push(ESC, 0x61, 0x01)        // Center
     addLine(footerText)
     lines.push(LF, LF, LF)

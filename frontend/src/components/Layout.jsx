@@ -11,7 +11,7 @@ function initials(name) {
 
 const pageTitles = {
   '/': 'Dashboard', '/new-order': 'New Order', '/orders': 'All Orders',
-  '/status': 'Order Status', '/delivery': 'Delivery Management', '/reports': 'Sales Report',
+  '/scan': 'Scan Station', '/status': 'Order Status', '/delivery': 'Delivery Management', '/reports': 'Sales Report',
   '/billing': 'Billing', '/products': 'Products', '/customers': 'Customers',
   '/settings': 'Settings', '/users': 'Users', '/companies': 'Companies', '/subscriptions': 'Subscriptions'
 }
@@ -62,6 +62,7 @@ export default function Layout({ children, overdueCnt = 0 }) {
 
         <div className="nav-group">
           <div className="nav-label">Process</div>
+          <NavItem path="/scan" label="Scan Station" icon={<svg viewBox="0 0 24 24"><path d="M3 5h2M3 10h2M3 15h2M7 3v18M17 3v18M21 5h-2M21 10h-2M21 15h-2"/></svg>} />
           <NavItem path="/status" label="Order Status" icon={<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>} />
           <NavItem path="/delivery" label="Delivery" badge icon={<svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>} />
         </div>
@@ -130,7 +131,7 @@ export default function Layout({ children, overdueCnt = 0 }) {
             { path: '/new-order', label: 'New', icon: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> },
             { path: '/orders', label: 'Orders', icon: <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
             { path: '/delivery', label: 'Delivery', icon: <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> },
-            { path: '/users', label: 'Users', icon: <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg> },
+            { path: '/scan', label: 'Scan', icon: <svg viewBox="0 0 24 24"><path d="M3 5h2M3 10h2M3 15h2M7 3v18M17 3v18M21 5h-2M21 10h-2M21 15h-2"/></svg> },
           ].map(item => (
             <div key={item.path} className={`bnav-item${active(item.path) ? ' active' : ''}`} onClick={() => nav(item.path)}>
               {item.icon}

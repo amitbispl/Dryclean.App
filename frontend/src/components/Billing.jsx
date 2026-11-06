@@ -71,10 +71,12 @@ export default function Billing() {
 
   function printNormalWith(cfg) {
     if (!detail) return
-    const { paperSize, showLogo, footerText, copies } = cfg
+    const { paperSize, showLogo, footerText, copies, barcode: showBarcode } = cfg
     const pageW = paperSize === '58' ? '58mm' : '80mm'
     const logoHtml = showLogo ? `<div style="text-align:center"><img src="/logo.jpg" style="height:40px;object-fit:contain" /></div>` : ''
     const copyCount = Math.max(1, Math.min(3, Number(copies) || 1))
+    const barcodeHtml = showBarcode !== false
+      ? `<div style="text-align:center;margin:8px 0"><svg class="barcode-${detail.id}"></svg></div>` : ''
 
     let bodyHtml = ''
     for (let c = 0; c < copyCount; c++) {
@@ -95,12 +97,17 @@ export default function Billing() {
         <div class="row"><span>Subtotal:</span><strong>₹${detail.total}</strong></div>
         <div class="row"><span>Advance Paid:</span><span>₹${detail.advance}</span></div>
         <div class="total"><span>Balance Due:</span><span>₹${detail.balance}</span></div>
-        <p style="text-align:center;margin-top:14px;font-size:11px">Payment: ${detail.payMode}</p>
+        <p style="text-align:center;margin-top:10px;font-size:11px">Payment: ${detail.payMode}</p>
+        ${barcodeHtml}
         <p style="text-align:center;font-size:10px">${footerText}</p>
       </div>`
     }
 
     const w = window.open('', '_blank')
+    const barcodeInit = showBarcode !== false ? `
+      <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+      <script>JsBarcode(".barcode-${detail.id}", "${detail.id}", {format:"CODE128",width:1.5,height:40,displayValue:true,fontSize:10,margin:4});<\/script>
+    ` : ''
     w.document.write(`<html><head><title>Invoice ${detail.id}</title>
     <style>
       body{font-family:Arial;max-width:${pageW};margin:10px auto;font-size:12px}
@@ -111,7 +118,8 @@ export default function Billing() {
       @media print{@page{size:${pageW} auto;margin:4mm}}
     </style>
     </head><body>${bodyHtml}
-    <script>window.print();window.close();<\/script></body></html>`)
+    ${barcodeInit}
+    <script>window.addEventListener('load',()=>{window.print();window.close();});<\/script></body></html>`)
     setPrintModal(false)
   }
 
