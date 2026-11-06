@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getOrders, getOrder } from '../api/client'
+import { getOrders, getOrder, getSettings } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass } from '../utils'
 import Modal from './Modal'
 import { buildEscPosReceipt, printBluetooth, printUSB } from '../utils/printUtils'
@@ -14,9 +14,11 @@ export default function Billing() {
   const [printStatus, setPrintStatus] = useState('')   // '', 'printing', 'done', 'error'
   const [printError, setPrintError] = useState('')
   const [printCfg, setPrintCfg] = useState(loadPrintSettings)
+  const [shopName, setShopName] = useState('')
 
   useEffect(() => {
     getOrders().then(setOrders).finally(() => setLoading(false))
+    getSettings().then(s => setShopName(s.shopName || '')).catch(() => {})
   }, [])
 
   const filtered = orders.filter(o =>
@@ -37,7 +39,7 @@ export default function Billing() {
 
   // Called by the main Print button — goes directly to the saved default mode
   async function handlePrint() {
-    const cfg = loadPrintSettings()
+    const cfg = { ...loadPrintSettings(), shopName }
     setPrintCfg(cfg)
     if (cfg.defaultMode === 'bluetooth') {
       setPrintModal(true)
@@ -71,7 +73,8 @@ export default function Billing() {
 
   function printNormalWith(cfg) {
     if (!detail) return
-    const { paperSize, showLogo, footerText, copies, barcode: showBarcode } = cfg
+    const { paperSize, showLogo, footerText, copies, barcode: showBarcode, shopName: sName } = cfg
+    const displayName = sName || shopName || 'WashMitra'
     const pageW = paperSize === '58' ? '58mm' : '80mm'
     const logoHtml = showLogo ? `<div style="text-align:center"><img src="/logo.jpg" style="height:40px;object-fit:contain" /></div>` : ''
     const copyCount = Math.max(1, Math.min(3, Number(copies) || 1))
@@ -84,7 +87,7 @@ export default function Billing() {
       bodyHtml += `
       <div class="copy" style="${c > 0 ? 'page-break-before:always' : ''}">
         ${logoHtml}
-        <h2>WashMitra</h2>
+        <h2>${displayName}</h2>
         <p style="text-align:center;font-size:11px">Tax Invoice</p>
         <hr>
         <div class="row"><span>Invoice No:</span><strong>${detail.id}</strong></div>
@@ -124,13 +127,13 @@ export default function Billing() {
     setPrintModal(false)
   }
 
-  function printNormal() { printNormalWith(printCfg) }
+  function printNormal() { printNormalWith({ ...printCfg, shopName }) }
 
   async function doPrintBluetooth() {
     setPrintStatus('printing')
     setPrintError('')
     try {
-      const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, printCfg)
+      const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, { ...printCfg, shopName })
       await printBluetooth(data)
       setPrintStatus('done')
     } catch (e) {
@@ -143,7 +146,7 @@ export default function Billing() {
     setPrintStatus('printing')
     setPrintError('')
     try {
-      const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, printCfg)
+      const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, { ...printCfg, shopName })
       await printUSB(data)
       setPrintStatus('done')
     } catch (e) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getOrders, getOrder, updateOrderStatus } from '../api/client'
+import { getOrders, getOrder, updateOrderStatus, getSettings } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass, today } from '../utils'
 import Modal from './Modal'
 import { useToast } from './Toast'
@@ -19,7 +19,12 @@ export default function Orders() {
   const [statusModal, setStatusModal] = useState(null)
   const [newStatus, setNewStatus] = useState('')
   const [statusNote, setStatusNote] = useState('')
+  const [shopName, setShopName] = useState('')
   const toast = useToast()
+
+  useEffect(() => {
+    getSettings().then(s => setShopName(s.shopName || '')).catch(() => {})
+  }, [])
 
   const load = useCallback(() => {
     const params = {}
@@ -39,7 +44,7 @@ export default function Orders() {
   }
 
   async function printTag(o) {
-    const settings = loadPrintSettings()
+    const settings = { ...loadPrintSettings(), shopName }
     try {
       if (settings.defaultMode === 'bluetooth') {
         const data = buildEscPosTag(o, fmtDate, settings)
@@ -48,7 +53,7 @@ export default function Orders() {
         const data = buildEscPosTag(o, fmtDate, settings)
         await printUSB(data)
       } else {
-        printBrowserTag(o, fmtDate)
+        printBrowserTag(o, fmtDate, settings)
       }
     } catch (e) {
       toast('Print tag failed: ' + (e.message || 'Error'), 'danger')

@@ -76,6 +76,7 @@ export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
   const footerText = sanitize(settings.footerText || 'Thank you! Visit again!')
   const printBarcode = settings.barcode !== false   // on by default
   const copies = Math.max(1, Math.min(3, Number(settings.copies) || 1))
+  const shopName = sanitize(settings.shopName || 'WashMitra')
 
   const { twoCol, centerText, divider, fixedCol } = makeHelpers(WIDTH)
   const all = []
@@ -87,7 +88,7 @@ export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
     lines.push(ESC, 0x40)              // Init printer
     lines.push(ESC, 0x61, 0x01)        // Center align
     lines.push(ESC, 0x45, 0x01)        // Bold ON
-    addLine('WashMitra')
+    addLine(shopName)
     lines.push(ESC, 0x45, 0x00)        // Bold OFF
     addLine('Tax Invoice')
     addLine(divider('='))
@@ -256,6 +257,7 @@ export async function printUSB(data) {
 export function buildEscPosTag(detail, fmtDate, settings = {}) {
   const paperSize = settings.paperSize || '80'
   const WIDTH = paperSize === '58' ? 30 : 42
+  const shopName = sanitize(settings.shopName || 'WashMitra')
   const { centerText, divider, fixedCol } = makeHelpers(WIDTH)
   const lines = []
   const addLine = (text) => encode(sanitize(text)).forEach(b => lines.push(b))
@@ -263,7 +265,7 @@ export function buildEscPosTag(detail, fmtDate, settings = {}) {
   lines.push(ESC, 0x40)              // Init
   lines.push(ESC, 0x61, 0x01)        // Center
   lines.push(ESC, 0x45, 0x01)        // Bold ON
-  addLine('WashMitra — PACKING TAG')
+  addLine(`${shopName} — PACKING TAG`)
   lines.push(ESC, 0x45, 0x00)        // Bold OFF
   addLine(divider('='))
 
@@ -298,7 +300,8 @@ export function buildEscPosTag(detail, fmtDate, settings = {}) {
   return new Uint8Array(lines)
 }
 
-export function printBrowserTag(detail, fmtDate) {
+export function printBrowserTag(detail, fmtDate, settings = {}) {
+  const shopName = settings.shopName || 'WashMitra'
   const barcodeValue = detail.mobile
     ? `${detail.id}-${detail.mobile}`
     : detail.id
@@ -327,7 +330,7 @@ export function printBrowserTag(detail, fmtDate) {
 </style>
 </head>
 <body>
-<h1>WashMitra</h1>
+<h1>${shopName}</h1>
 <div class="sub">PACKING TAG</div>
 <div class="order-id">${detail.id}</div>
 <div class="row"><span class="label">Customer:</span><span>${detail.custName || ''}</span></div>

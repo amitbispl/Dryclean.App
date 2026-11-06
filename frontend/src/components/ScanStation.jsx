@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { getOrder, updateOrderStatus } from '../api/client'
+import { getOrder, getOrders, updateOrderStatus, getSettings } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass } from '../utils'
 import { useToast } from './Toast'
 import { buildEscPosTag, printBrowserTag, printBluetooth, printUSB } from '../utils/printUtils'
@@ -17,7 +17,13 @@ export default function ScanStation() {
   const [cameraErr, setCameraErr]   = useState('')
   const [scanFlash, setScanFlash]   = useState(false) // green flash on scan
   const [deliveryMode, setDeliveryMode] = useState(false)
+  const [mobileResults, setMobileResults] = useState([])
+  const [shopName, setShopName] = useState('')
   const toast = useToast()
+
+  useEffect(() => {
+    getSettings().then(s => setShopName(s.shopName || '')).catch(() => {})
+  }, [])
 
   const inputRef    = useRef(null)
   const videoRef    = useRef(null)
@@ -43,16 +49,48 @@ export default function ScanStation() {
   }, [cameraOn])
 
   async function handleScan(raw) {
-    // Barcode format is "DC10003-9876543210" — extract order ID before the first dash
-    const full = raw.trim().toUpperCase()
-    const id = full.includes('-') ? full.split('-')[0] : full
-    if (!id || cooldownRef.current) return
+    if (!raw.trim() || cooldownRef.current) return
     cooldownRef.current = true
     setTimeout(() => { cooldownRef.current = false }, 1500)
 
+    // Mobile number search: 10 digits
+    if (/^\d{10}$/.test(raw.trim())) {
+      setLoading(true)
+      setOrder(null)
+      setMobileResults([])
+      try {
+        const results = await getOrders({ search: raw.trim() })
+        if (results.length === 0) {
+          toast(`No orders found for mobile ${raw.trim()}`, 'danger')
+          if (navigator.vibrate) navigator.vibrate([80, 40, 80])
+        } else if (results.length === 1) {
+          await loadOrder(results[0].id)
+        } else {
+          setMobileResults(results)
+        }
+      } catch {
+        toast('Search failed', 'danger')
+      } finally {
+        setLoading(false)
+        setInputVal('')
+        inputRef.current?.focus()
+      }
+      return
+    }
+
+    // Barcode format "DC10003-9876543210" — extract order ID before the first dash
+    const full = raw.trim().toUpperCase()
+    const id = full.includes('-') ? full.split('-')[0] : full
+    if (!id) return
+
     setLoading(true)
     setOrder(null)
+    setMobileResults([])
     setScanFlash(false)
+    await loadOrder(id)
+  }
+
+  async function loadOrder(id) {
     try {
       const o = await getOrder(id)
       setOrder(o)
@@ -60,11 +98,15 @@ export default function ScanStation() {
       setTimeout(() => setScanFlash(false), 600)
       if (navigator.vibrate) navigator.vibrate(80)
 
-      // Delivery mode: auto-mark as Delivered if not already terminal
-      if (deliveryMode && !['Delivered', 'Cancelled'].includes(o.status)) {
-        await updateOrderStatus(o.id, { status: 'Delivered', note: 'Auto-delivered via scan', updatedBy: 'Scan' })
-        setOrder(prev => prev ? { ...prev, status: 'Delivered' } : prev)
-        toast(`${o.id} marked Delivered`)
+      // Delivery mode: only auto-deliver if status is Ready
+      if (deliveryMode) {
+        if (o.status === 'Ready') {
+          await updateOrderStatus(o.id, { status: 'Delivered', note: 'Auto-delivered via scan', updatedBy: 'Scan' })
+          setOrder(prev => prev ? { ...prev, status: 'Delivered' } : prev)
+          toast(`${o.id} marked Delivered`)
+        } else if (!['Delivered', 'Cancelled'].includes(o.status)) {
+          toast(`Order not Ready yet — Status: ${o.status}`, 'danger')
+        }
       }
     } catch {
       toast(`Order "${id}" not found`, 'danger')
@@ -159,7 +201,7 @@ export default function ScanStation() {
   }
 
   async function printTag(o) {
-    const settings = loadPrintSettings()
+    const settings = { ...loadPrintSettings(), shopName }
     try {
       if (settings.defaultMode === 'bluetooth') {
         const data = buildEscPosTag(o, fmtDate, settings)
@@ -168,7 +210,7 @@ export default function ScanStation() {
         const data = buildEscPosTag(o, fmtDate, settings)
         await printUSB(data)
       } else {
-        printBrowserTag(o, fmtDate)
+        printBrowserTag(o, fmtDate, settings)
       }
     } catch (e) {
       toast('Print tag failed: ' + (e.message || 'Error'), 'danger')
@@ -272,6 +314,28 @@ export default function ScanStation() {
               Hold barcode inside the box
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Mobile search results */}
+      {mobileResults.length > 0 && (
+        <div className="panel" style={{ marginBottom: 16 }}>
+          <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--gray100)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>{mobileResults.length} orders found — select one</span>
+            <button className="btn btn-outline btn-sm" onClick={() => { setMobileResults([]); inputRef.current?.focus() }}>Clear</button>
+          </div>
+          {mobileResults.map(o => (
+            <div key={o.id}
+              onClick={() => { setMobileResults([]); setLoading(true); loadOrder(o.id) }}
+              style={{ padding: '12px 20px', borderBottom: '1px solid var(--gray100)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+            >
+              <div>
+                <div style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 14 }}>{o.id}</div>
+                <div style={{ fontSize: 12, color: 'var(--gray600)' }}>{o.custName} · {o.entryDate ? new Date(o.entryDate).toLocaleDateString('en-IN') : ''}</div>
+              </div>
+              <span className={`badge ${statusBadgeClass(o.status)}`}>{o.status}</span>
+            </div>
+          ))}
         </div>
       )}
 
