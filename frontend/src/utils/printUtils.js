@@ -52,15 +52,19 @@ function encode(text) {
 }
 
 // ESC/POS CODE128 barcode command
-// GS k 73 nL nH {B<data>  (CODE128, code-set B — all printable ASCII)
-function barcodeCommands(orderId, mobile) {
-  const value = mobile ? `${sanitize(orderId)}-${sanitize(mobile)}` : sanitize(orderId)
+// 58mm paper can only fit ~7-10 chars at module width 2 reliably.
+// Use short value (order ID only) for 58mm; full OrderID-Mobile for 80mm.
+function barcodeCommands(orderId, mobile, paperSize) {
+  const is58 = paperSize === '58'
+  const value = (!is58 && mobile)
+    ? `${sanitize(orderId)}-${sanitize(mobile)}`
+    : sanitize(orderId)
   const data = `{B${value}`   // {B = select code set B
   const bytes = []
   bytes.push(ESC, 0x61, 0x01)   // center
   bytes.push(GS, 0x48, 0x02)    // HRI text below
   bytes.push(GS, 0x68, 60)      // height 60 dots
-  bytes.push(GS, 0x77, 2)       // module width 2
+  bytes.push(GS, 0x77, is58 ? 2 : 2)  // module width 2 (fits on 80mm; order-only fits 58mm)
   bytes.push(GS, 0x6B, 73, data.length & 0xFF, (data.length >> 8) & 0xFF)
   for (let i = 0; i < data.length; i++) bytes.push(data.charCodeAt(i) & 0xFF)
   bytes.push(LF)
@@ -124,7 +128,7 @@ export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
 
     // Barcode (CODE128 of order ID)
     if (printBarcode && detail.id) {
-      barcodeCommands(detail.id, detail.mobile).forEach(b => lines.push(b))
+      barcodeCommands(detail.id, detail.mobile, paperSize).forEach(b => lines.push(b))
       lines.push(LF)
     }
 
@@ -290,7 +294,7 @@ export function buildEscPosTag(detail, fmtDate, settings = {}) {
 
   // Barcode
   if (detail.id) {
-    barcodeCommands(detail.id, detail.mobile).forEach(b => lines.push(b))
+    barcodeCommands(detail.id, detail.mobile, paperSize).forEach(b => lines.push(b))
     lines.push(LF)
   }
 
