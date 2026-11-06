@@ -20,6 +20,7 @@ export default function ScanStation() {
   const [mobileResults, setMobileResults] = useState([])
   const [shopName, setShopName] = useState('')
   const [testModal, setTestModal] = useState(false)
+  const [lastRaw, setLastRaw] = useState('')   // debug: last value received
   const toast = useToast()
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export default function ScanStation() {
 
   async function handleScan(raw) {
     if (!raw.trim() || cooldownRef.current) return
+    setLastRaw(raw.trim())
     cooldownRef.current = true
     setTimeout(() => { cooldownRef.current = false }, 1500)
 
@@ -284,6 +286,7 @@ export default function ScanStation() {
                 value={inputVal}
                 onChange={e => setInputVal(e.target.value)}
                 onKeyDown={onKeyDown}
+                onPaste={e => { e.preventDefault(); const v = e.clipboardData.getData('text'); if (v) handleScan(v) }}
                 placeholder="Scan barcode or type order ID and press Enter..."
                 autoFocus
                 style={{
@@ -316,7 +319,9 @@ export default function ScanStation() {
               Test Scanner
             </button>
             <span style={{ fontSize: 12, color: 'var(--gray400)', marginLeft: 'auto' }}>
-              Keyboard / BT scanner: just scan — input is always ready
+              {lastRaw
+                ? <span>Last received: <strong style={{ color: 'var(--blue)' }}>{lastRaw}</strong></span>
+                : 'Keyboard / BT scanner: just scan — input is always ready'}
             </span>
           </div>
         </div>
