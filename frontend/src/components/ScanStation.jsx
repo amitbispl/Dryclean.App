@@ -40,7 +40,9 @@ export default function ScanStation() {
   }, [cameraOn])
 
   async function handleScan(raw) {
-    const id = raw.trim().toUpperCase()
+    // Barcode format is "DC10003-9876543210" — extract order ID before the first dash
+    const full = raw.trim().toUpperCase()
+    const id = full.includes('-') ? full.split('-')[0] : full
     if (!id || cooldownRef.current) return
     cooldownRef.current = true
     setTimeout(() => { cooldownRef.current = false }, 1500)

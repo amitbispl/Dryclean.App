@@ -75,6 +75,7 @@ export default function Billing() {
     const pageW = paperSize === '58' ? '58mm' : '80mm'
     const logoHtml = showLogo ? `<div style="text-align:center"><img src="/logo.jpg" style="height:40px;object-fit:contain" /></div>` : ''
     const copyCount = Math.max(1, Math.min(3, Number(copies) || 1))
+    const barcodeVal  = detail.mobile ? `${detail.id}-${detail.mobile}` : detail.id
     const barcodeHtml = showBarcode !== false
       ? `<div style="text-align:center;margin:8px 0"><svg class="barcode-${detail.id}"></svg></div>` : ''
 
@@ -106,7 +107,7 @@ export default function Billing() {
     const w = window.open('', '_blank')
     const barcodeInit = showBarcode !== false ? `
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
-      <script>JsBarcode(".barcode-${detail.id}", "${detail.id}", {format:"CODE128",width:1.5,height:40,displayValue:true,fontSize:10,margin:4});<\/script>
+      <script>JsBarcode(".barcode-${detail.id}", "${barcodeVal}", {format:"CODE128",width:1.5,height:40,displayValue:true,fontSize:10,margin:4});<\/script>
     ` : ''
     w.document.write(`<html><head><title>Invoice ${detail.id}</title>
     <style>

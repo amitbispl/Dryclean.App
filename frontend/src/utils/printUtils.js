@@ -53,8 +53,9 @@ function encode(text) {
 
 // ESC/POS CODE128 barcode command
 // GS k 73 nL nH {B<data>  (CODE128, code-set B — all printable ASCII)
-function barcodeCommands(orderId) {
-  const data = `{B${sanitize(orderId)}`   // {B = select code set B
+function barcodeCommands(orderId, mobile) {
+  const value = mobile ? `${sanitize(orderId)}-${sanitize(mobile)}` : sanitize(orderId)
+  const data = `{B${value}`   // {B = select code set B
   const bytes = []
   bytes.push(ESC, 0x61, 0x01)   // center
   bytes.push(GS, 0x48, 0x02)    // HRI text below
@@ -122,7 +123,7 @@ export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
 
     // Barcode (CODE128 of order ID)
     if (printBarcode && detail.id) {
-      barcodeCommands(detail.id).forEach(b => lines.push(b))
+      barcodeCommands(detail.id, detail.mobile).forEach(b => lines.push(b))
       lines.push(LF)
     }
 
