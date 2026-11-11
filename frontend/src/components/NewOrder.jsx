@@ -102,10 +102,10 @@ export default function NewOrder() {
 
     try {
       if (cfg.defaultMode === 'bluetooth') {
-        const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        const data = await buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
         await printBluetooth(data)
       } else if (cfg.defaultMode === 'usb') {
-        const data = buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        const data = await buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
         await printUSB(data)
       } else {
         // Normal browser print

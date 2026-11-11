@@ -212,10 +212,10 @@ export default function ScanStation() {
     const settings = { ...loadPrintSettings(), shopName }
     try {
       if (settings.defaultMode === 'bluetooth') {
-        const data = buildEscPosTag(o, fmtDate, settings)
+        const data = await buildEscPosTag(o, fmtDate, settings)
         await printBluetooth(data)
       } else if (settings.defaultMode === 'usb') {
-        const data = buildEscPosTag(o, fmtDate, settings)
+        const data = await buildEscPosTag(o, fmtDate, settings)
         await printUSB(data)
       } else {
         printBrowserTag(o, fmtDate, settings)

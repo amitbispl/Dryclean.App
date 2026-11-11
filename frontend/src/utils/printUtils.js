@@ -51,34 +51,91 @@ function encode(text) {
   return bytes
 }
 
-// ESC/POS CODE128 barcode command
-// 58mm paper can only fit ~7-10 chars at module width 2 reliably.
-// Use short value (order ID only) for 58mm; full OrderID-Mobile for 80mm.
-function barcodeCommands(orderId, mobile, paperSize) {
+// Render barcode via JsBarcode on a canvas then encode as ESC/POS raster image.
+// This bypasses the printer's native GS k barcode command entirely — many cheap
+// BT thermal printers generate visually plausible but unreadable barcodes with GS k.
+// GS v 0 (raster image) works on every thermal printer that can print images.
+async function generateBarcodeBytes(orderId, mobile, paperSize) {
+  if (typeof window === 'undefined') return []
   const is58 = paperSize === '58'
   const value = (!is58 && mobile)
     ? `${sanitize(orderId)}-${sanitize(mobile)}`
     : sanitize(orderId)
-  const bytes = []
-  bytes.push(ESC, 0x61, 0x01)   // center
-  bytes.push(GS, 0x48, 0x02)    // HRI text below
-  bytes.push(GS, 0x68, is58 ? 80 : 60)  // height
-  bytes.push(GS, 0x77, is58 ? 3 : 2)    // module width
 
-  // Try CODE39 (Function 1) — universally supported by all thermal printers,
-  // no code-set prefix needed, DC10014 uses only valid CODE39 chars (A-Z, 0-9, dash)
-  bytes.push(GS, 0x6B, 4)  // GS k type=4 → CODE39, Function 1 (NUL-terminated)
-  for (let i = 0; i < value.length; i++) bytes.push(value.charCodeAt(i) & 0xFF)
-  bytes.push(0x00)  // NUL terminator
+  // Load JsBarcode once
+  if (!window.JsBarcode) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script')
+      s.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js'
+      s.onload = resolve
+      s.onerror = () => reject(new Error('JsBarcode load failed'))
+      document.head.appendChild(s)
+    })
+  }
+
+  // Render to temp canvas
+  const tmp = document.createElement('canvas')
+  try {
+    window.JsBarcode(tmp, value, {
+      format: 'CODE128',
+      width: 2,
+      height: is58 ? 60 : 70,
+      displayValue: true,
+      fontSize: 12,
+      margin: 10,
+      background: '#ffffff',
+      lineColor: '#000000',
+    })
+  } catch (e) {
+    console.error('Barcode render error:', e)
+    return []
+  }
+
+  // Scale to fit paper printable width (58mm ≈ 360 dots, 80mm ≈ 480 dots)
+  const targetW = is58 ? 360 : 480
+  const finalH = Math.round(tmp.height * targetW / tmp.width)
+  const fc = document.createElement('canvas')
+  fc.width = targetW
+  fc.height = finalH
+  const ctx = fc.getContext('2d')
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, targetW, finalH)
+  ctx.drawImage(tmp, 0, 0, targetW, finalH)
+
+  const imgData = ctx.getImageData(0, 0, targetW, finalH)
+  const widthBytes = Math.ceil(targetW / 8)
+
+  const bytes = []
+  bytes.push(ESC, 0x61, 0x01)                  // center
+  bytes.push(GS, 0x76, 0x30, 0x00)             // GS v 0 — raster image, normal density
+  bytes.push(widthBytes & 0xFF, (widthBytes >> 8) & 0xFF)  // xL xH (width in bytes)
+  bytes.push(finalH & 0xFF, (finalH >> 8) & 0xFF)          // yL yH (height in dots)
+
+  for (let y = 0; y < finalH; y++) {
+    for (let bx = 0; bx < widthBytes; bx++) {
+      let byte = 0
+      for (let bit = 0; bit < 8; bit++) {
+        const x = bx * 8 + bit
+        if (x < targetW) {
+          const i = (y * targetW + x) * 4
+          // dark pixel (r<128 and g<128) → 1 bit in ESC/POS
+          if (imgData.data[i] < 128 && imgData.data[i + 1] < 128) {
+            byte |= (0x80 >> bit)
+          }
+        }
+      }
+      bytes.push(byte)
+    }
+  }
 
   bytes.push(LF)
-  bytes.push(ESC, 0x61, 0x00)   // back to left
+  bytes.push(ESC, 0x61, 0x00)  // left align
   return bytes
 }
 
 // Build ESC/POS byte array for the receipt
 // settings: { paperSize: '58'|'80', copies: '1'|'2'|'3', footerText: string, barcode: bool }
-export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
+export async function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
   const paperSize = settings.paperSize || '80'
   const WIDTH = paperSize === '58' ? 30 : 42
   const footerText = sanitize(settings.footerText || 'Thank you! Visit again!')
@@ -130,9 +187,10 @@ export function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {}) {
     addLine('Payment: ' + sanitize(detail.payMode || ''))
     lines.push(LF)
 
-    // Barcode (CODE128 of order ID)
+    // Barcode — rendered as bitmap image (bypasses printer's GS k engine)
     if (printBarcode && detail.id) {
-      barcodeCommands(detail.id, detail.mobile, paperSize).forEach(b => lines.push(b))
+      const bcBytes = await generateBarcodeBytes(detail.id, detail.mobile, paperSize)
+      bcBytes.forEach(b => lines.push(b))
       lines.push(LF)
     }
 
@@ -262,7 +320,7 @@ export async function printUSB(data) {
 
 // --- Packing Tag (compact label to attach to clothes bag) ---
 
-export function buildEscPosTag(detail, fmtDate, settings = {}) {
+export async function buildEscPosTag(detail, fmtDate, settings = {}) {
   const paperSize = settings.paperSize || '80'
   const WIDTH = paperSize === '58' ? 30 : 42
   const shopName = sanitize(settings.shopName || 'WashMitra')
@@ -296,9 +354,10 @@ export function buildEscPosTag(detail, fmtDate, settings = {}) {
 
   addLine(divider('='))
 
-  // Barcode
+  // Barcode — rendered as bitmap image
   if (detail.id) {
-    barcodeCommands(detail.id, detail.mobile, paperSize).forEach(b => lines.push(b))
+    const bcBytes = await generateBarcodeBytes(detail.id, detail.mobile, paperSize)
+    bcBytes.forEach(b => lines.push(b))
     lines.push(LF)
   }
 
