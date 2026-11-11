@@ -57,10 +57,9 @@ function encode(text) {
 // GS v 0 (raster image) works on every thermal printer that can print images.
 async function generateBarcodeBytes(orderId, mobile, paperSize) {
   if (typeof window === 'undefined') return []
-  const is58 = paperSize === '58'
-  const value = (!is58 && mobile)
-    ? `${sanitize(orderId)}-${sanitize(mobile)}`
-    : sanitize(orderId)
+  // Always encode order ID only — including mobile makes the value 18+ chars which
+  // overflows 58mm paper and produces a clipped/unreadable barcode.
+  const value = sanitize(orderId)
 
   // Load JsBarcode once
   if (!window.JsBarcode) {
@@ -73,18 +72,18 @@ async function generateBarcodeBytes(orderId, mobile, paperSize) {
     })
   }
 
-  // Render at the right module width — NO scaling after this.
-  // Scaling introduces anti-aliasing that blurs bar edges → unreadable on printer.
-  const moduleWidth = is58 ? 2 : 3
+  // Module width 3 for both paper sizes — wider bars tolerate thermal print smear.
+  // Order ID only (~7 chars) → ~114 CODE128 modules × 3 = 342px → fits 58mm (384 dots).
+  // NO scaling after render — scaling anti-aliases bar edges → scanner can't read.
   const tmp = document.createElement('canvas')
   try {
     window.JsBarcode(tmp, value, {
       format: 'CODE128',
-      width: moduleWidth,
-      height: is58 ? 60 : 70,
+      width: 3,
+      height: 70,
       displayValue: true,
-      fontSize: 12,
-      margin: 10,
+      fontSize: 13,
+      margin: 12,
       background: '#ffffff',
       lineColor: '#000000',
     })
@@ -95,28 +94,25 @@ async function generateBarcodeBytes(orderId, mobile, paperSize) {
 
   const srcW = tmp.width
   const srcH = tmp.height
-
-  // Paper printable dots: 58mm→384, 80mm→576. Center barcode within paper row.
-  const paperDots = is58 ? 384 : 576
-  const widthBytes = Math.ceil(paperDots / 8)
-  const offsetDots = Math.max(0, Math.floor((paperDots - srcW) / 2))
+  // widthBytes rounded up to nearest byte; trailing bits in last byte will be white (0)
+  const widthBytes = Math.ceil(srcW / 8)
 
   const imgData = tmp.getContext('2d').getImageData(0, 0, srcW, srcH)
 
   const bytes = []
+  bytes.push(ESC, 0x61, 0x01)                             // center align
   bytes.push(GS, 0x76, 0x30, 0x00)                        // GS v 0 — raster image
-  bytes.push(widthBytes & 0xFF, (widthBytes >> 8) & 0xFF)  // xL xH (width in bytes)
-  bytes.push(srcH & 0xFF, (srcH >> 8) & 0xFF)              // yL yH (height in dots)
+  bytes.push(widthBytes & 0xFF, (widthBytes >> 8) & 0xFF)  // xL xH (bytes per row)
+  bytes.push(srcH & 0xFF, (srcH >> 8) & 0xFF)              // yL yH (dot rows)
 
   for (let y = 0; y < srcH; y++) {
     for (let bx = 0; bx < widthBytes; bx++) {
       let byte = 0
       for (let bit = 0; bit < 8; bit++) {
-        const dotX = bx * 8 + bit      // dot column in paper
-        const srcX = dotX - offsetDots // corresponding pixel in canvas
-        if (srcX >= 0 && srcX < srcW) {
-          const i = (y * srcW + srcX) * 4
-          // threshold at 64 — only solid black pixels, no anti-aliased gray
+        const x = bx * 8 + bit
+        if (x < srcW) {
+          const i = (y * srcW + x) * 4
+          // solid black only — threshold 64 avoids capturing anti-aliased gray edges
           if (imgData.data[i] < 64) {
             byte |= (0x80 >> bit)
           }
@@ -127,6 +123,7 @@ async function generateBarcodeBytes(orderId, mobile, paperSize) {
   }
 
   bytes.push(LF)
+  bytes.push(ESC, 0x61, 0x00)  // back to left
   return bytes
 }
 
