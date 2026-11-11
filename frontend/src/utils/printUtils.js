@@ -73,12 +73,14 @@ async function generateBarcodeBytes(orderId, mobile, paperSize) {
     })
   }
 
-  // Render to temp canvas
+  // Render at the right module width — NO scaling after this.
+  // Scaling introduces anti-aliasing that blurs bar edges → unreadable on printer.
+  const moduleWidth = is58 ? 2 : 3
   const tmp = document.createElement('canvas')
   try {
     window.JsBarcode(tmp, value, {
       format: 'CODE128',
-      width: 2,
+      width: moduleWidth,
       height: is58 ? 60 : 70,
       displayValue: true,
       fontSize: 12,
@@ -91,35 +93,31 @@ async function generateBarcodeBytes(orderId, mobile, paperSize) {
     return []
   }
 
-  // Scale to fit paper printable width (58mm ≈ 360 dots, 80mm ≈ 480 dots)
-  const targetW = is58 ? 360 : 480
-  const finalH = Math.round(tmp.height * targetW / tmp.width)
-  const fc = document.createElement('canvas')
-  fc.width = targetW
-  fc.height = finalH
-  const ctx = fc.getContext('2d')
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, targetW, finalH)
-  ctx.drawImage(tmp, 0, 0, targetW, finalH)
+  const srcW = tmp.width
+  const srcH = tmp.height
 
-  const imgData = ctx.getImageData(0, 0, targetW, finalH)
-  const widthBytes = Math.ceil(targetW / 8)
+  // Paper printable dots: 58mm→384, 80mm→576. Center barcode within paper row.
+  const paperDots = is58 ? 384 : 576
+  const widthBytes = Math.ceil(paperDots / 8)
+  const offsetDots = Math.max(0, Math.floor((paperDots - srcW) / 2))
+
+  const imgData = tmp.getContext('2d').getImageData(0, 0, srcW, srcH)
 
   const bytes = []
-  bytes.push(ESC, 0x61, 0x01)                  // center
-  bytes.push(GS, 0x76, 0x30, 0x00)             // GS v 0 — raster image, normal density
+  bytes.push(GS, 0x76, 0x30, 0x00)                        // GS v 0 — raster image
   bytes.push(widthBytes & 0xFF, (widthBytes >> 8) & 0xFF)  // xL xH (width in bytes)
-  bytes.push(finalH & 0xFF, (finalH >> 8) & 0xFF)          // yL yH (height in dots)
+  bytes.push(srcH & 0xFF, (srcH >> 8) & 0xFF)              // yL yH (height in dots)
 
-  for (let y = 0; y < finalH; y++) {
+  for (let y = 0; y < srcH; y++) {
     for (let bx = 0; bx < widthBytes; bx++) {
       let byte = 0
       for (let bit = 0; bit < 8; bit++) {
-        const x = bx * 8 + bit
-        if (x < targetW) {
-          const i = (y * targetW + x) * 4
-          // dark pixel (r<128 and g<128) → 1 bit in ESC/POS
-          if (imgData.data[i] < 128 && imgData.data[i + 1] < 128) {
+        const dotX = bx * 8 + bit      // dot column in paper
+        const srcX = dotX - offsetDots // corresponding pixel in canvas
+        if (srcX >= 0 && srcX < srcW) {
+          const i = (y * srcW + srcX) * 4
+          // threshold at 64 — only solid black pixels, no anti-aliased gray
+          if (imgData.data[i] < 64) {
             byte |= (0x80 >> bit)
           }
         }
@@ -129,7 +127,6 @@ async function generateBarcodeBytes(orderId, mobile, paperSize) {
   }
 
   bytes.push(LF)
-  bytes.push(ESC, 0x61, 0x00)  // left align
   return bytes
 }
 
