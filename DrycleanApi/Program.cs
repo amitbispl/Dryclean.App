@@ -589,17 +589,19 @@ app.MapPost("/api/orders", async (AppDbContext db, ClaimsPrincipal claims, Creat
 
 app.MapGet("/api/orders/{id}", async (AppDbContext db, ClaimsPrincipal claims, string id) =>
 {
+    var companyId = GetCompanyId(claims);
     var order = await db.Orders
         .Include(o => o.Items)
         .Include(o => o.History)
-        .FirstOrDefaultAsync(o => o.Id == id);
+        .FirstOrDefaultAsync(o => o.Id == id && o.CompanyId == companyId);
     return order is null ? Results.NotFound() : Results.Ok(order);
 }).RequireAuthorization();
 
 app.MapPut("/api/orders/{id}/status", async (AppDbContext db, ClaimsPrincipal claims, string id, UpdateStatusRequest req) =>
 {
+    var companyId = GetCompanyId(claims);
     var userName = GetUserName(claims);
-    var order = await db.Orders.FindAsync(id);
+    var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == id && o.CompanyId == companyId);
     if (order is null) return Results.NotFound();
     order.Status = req.Status;
     db.OrderHistories.Add(new OrderHistory
