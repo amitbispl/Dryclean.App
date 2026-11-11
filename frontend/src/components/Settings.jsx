@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getSettings, updateSettings } from '../api/client'
 import { useToast } from './Toast'
 import { loadPrintSettings, savePrintSettings } from '../utils/printSettings'
+import { forgetBluetoothPrinter } from '../utils/printUtils'
 
 export default function Settings() {
   const [form, setForm] = useState({ shopName: '', shopAddress: '', shopCity: '', shopPhone: '', whatsapp: false, barcode: false, sms: false })
@@ -103,12 +104,12 @@ export default function Settings() {
                 <option value="usb">USB / OTG Thermal</option>
                 <option value="bluetooth">Bluetooth Thermal</option>
               </select>
-              {printCfg.defaultMode === 'bluetooth' && localStorage.getItem('washmitra_bt_printer_id') && (
+              {printCfg.defaultMode === 'bluetooth' && (
                 <button
                   type="button"
                   className="btn btn-sm btn-outline"
                   style={{ marginTop: 6, fontSize: 12 }}
-                  onClick={() => { localStorage.removeItem('washmitra_bt_printer_id'); window.location.reload() }}
+                  onClick={() => { forgetBluetoothPrinter(); window.location.reload() }}
                 >
                   Forget saved printer (pick new one on next print)
                 </button>

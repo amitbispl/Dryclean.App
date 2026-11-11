@@ -207,7 +207,15 @@ const BLE_SERVICES = [
   { service: '49535343-fe7d-4ae5-8fa9-9fafd205e455', char: '49535343-8841-43f4-a8d4-ecbe34729bb3' },
 ]
 
-const BT_PRINTER_KEY = 'washmitra_bt_printer_id'
+// Module-level BLE cache — keeps the connection alive across multiple prints
+// in the same browser tab so the picker only appears once per session.
+let _ble = null  // { device, characteristic }
+
+export function forgetBluetoothPrinter() {
+  if (_ble) { try { _ble.device.gatt.disconnect() } catch {} }
+  _ble = null
+  localStorage.removeItem('washmitra_bt_printer_id')
+}
 
 export async function printBluetooth(data) {
   if (!navigator.bluetooth) {
@@ -216,43 +224,28 @@ export async function printBluetooth(data) {
 
   const optionalServices = BLE_SERVICES.map(s => s.service)
 
-  // Auto-reconnect to previously used printer without showing the picker again.
-  // navigator.bluetooth.getDevices() returns devices the user already granted (Chrome 85+).
-  let device = null
-  const savedId = localStorage.getItem(BT_PRINTER_KEY)
-  if (savedId && navigator.bluetooth.getDevices) {
+  // Reuse cached connection from this tab session — no picker on subsequent prints
+  if (_ble && _ble.device.gatt.connected) {
     try {
-      const known = await navigator.bluetooth.getDevices()
-      device = known.find(d => d.id === savedId) ?? null
-    } catch { /* getDevices not supported */ }
+      await sendBleData(_ble.characteristic, data)
+      return
+    } catch {
+      _ble = null  // connection dropped, fall through to reconnect
+    }
   }
 
-  if (!device) {
-    // First time or saved printer not found — show picker
-    device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices })
-    localStorage.setItem(BT_PRINTER_KEY, device.id)
-  }
-
-  let server
-  try {
-    server = await device.gatt.connect()
-  } catch {
-    // Auto-connect failed (printer off / out of range) — clear saved and show picker
-    localStorage.removeItem(BT_PRINTER_KEY)
-    device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices })
-    localStorage.setItem(BT_PRINTER_KEY, device.id)
-    server = await device.gatt.connect()
-  }
+  // Show picker (first print this session, or after connection dropped)
+  const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices })
+  const server = await device.gatt.connect()
 
   let characteristic = null
-
   for (const { service: svcUuid, char: charUuid } of BLE_SERVICES) {
     try {
       const svc = await server.getPrimaryService(svcUuid)
       characteristic = await svc.getCharacteristic(charUuid)
       break
     } catch {
-      // try next
+      // try next service
     }
   }
 
@@ -261,13 +254,18 @@ export async function printBluetooth(data) {
     throw new Error('Could not find a compatible print characteristic. Check your printer model.')
   }
 
-  // Send data in chunks (BLE MTU is typically 20-512 bytes)
+  // Cache connection — keep alive (do NOT disconnect) so next print skips the picker
+  _ble = { device, characteristic }
+  device.addEventListener('gattserverdisconnected', () => { _ble = null })
+
+  await sendBleData(characteristic, data)
+}
+
+async function sendBleData(characteristic, data) {
   const CHUNK = 200
   for (let i = 0; i < data.length; i += CHUNK) {
     await characteristic.writeValue(data.slice(i, i + CHUNK))
   }
-
-  device.gatt.disconnect()
 }
 
 // --- USB / OTG Thermal Print ---
