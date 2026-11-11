@@ -68,6 +68,7 @@ export default function Customers() {
               <div className="cust-meta">📞 {c.mobile}</div>
               {c.address && <div className="cust-meta">📍 {c.address}</div>}
               <div className="cust-meta">Since {fmtDate(c.regDate)}</div>
+              {c.createdBy && <div className="cust-meta" style={{fontSize:10,color:'#888'}}>Added by: {c.createdBy}{c.createdByIp ? ` · IP: ${c.createdByIp}` : ''}</div>}
               {c.customerType && c.customerType !== 'Regular' && (
                 <span className="badge" style={{
                   fontSize: 10, padding: '2px 6px', marginTop: 2,

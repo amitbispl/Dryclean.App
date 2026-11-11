@@ -219,6 +219,14 @@ namespace DrycleanApi.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CreatedByIp")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("CustomerType")
                         .IsRequired()
                         .ValueGeneratedOnAdd()

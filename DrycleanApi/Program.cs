@@ -446,11 +446,13 @@ app.MapGet("/api/customers", async (AppDbContext db, ClaimsPrincipal claims) =>
     return Results.Ok(custs);
 }).RequireAuthorization();
 
-app.MapPost("/api/customers", async (AppDbContext db, ClaimsPrincipal claims, Customer customer) =>
+app.MapPost("/api/customers", async (AppDbContext db, ClaimsPrincipal claims, Customer customer, HttpContext http) =>
 {
     customer.CompanyId = GetCompanyId(claims);
     customer.RegDate = DateOnly.FromDateTime(DateTime.Today);
     customer.CreatedAt = DateTime.UtcNow;
+    customer.CreatedBy = GetUserName(claims);
+    customer.CreatedByIp = http.Connection.RemoteIpAddress?.MapToIPv4().ToString() ?? "";
     db.Customers.Add(customer);
     await db.SaveChangesAsync();
     return Results.Created($"/api/customers/{customer.Id}", customer);

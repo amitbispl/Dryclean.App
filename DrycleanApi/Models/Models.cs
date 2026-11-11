@@ -42,6 +42,8 @@ public class Customer
     public string CustomerType { get; set; } = "Regular";
     public DateOnly RegDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string CreatedBy { get; set; } = "";
+    public string CreatedByIp { get; set; } = "";
     [JsonIgnore] public List<Order> Orders { get; set; } = new();
     [NotMapped] public int OrderCount { get; set; }
 }
