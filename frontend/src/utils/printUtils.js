@@ -207,6 +207,8 @@ const BLE_SERVICES = [
   { service: '49535343-fe7d-4ae5-8fa9-9fafd205e455', char: '49535343-8841-43f4-a8d4-ecbe34729bb3' },
 ]
 
+const BT_PRINTER_KEY = 'washmitra_bt_printer_id'
+
 export async function printBluetooth(data) {
   if (!navigator.bluetooth) {
     throw new Error('Web Bluetooth is not supported in this browser. Use Chrome on Android/Desktop.')
@@ -214,12 +216,33 @@ export async function printBluetooth(data) {
 
   const optionalServices = BLE_SERVICES.map(s => s.service)
 
-  const device = await navigator.bluetooth.requestDevice({
-    acceptAllDevices: true,
-    optionalServices,
-  })
+  // Auto-reconnect to previously used printer without showing the picker again.
+  // navigator.bluetooth.getDevices() returns devices the user already granted (Chrome 85+).
+  let device = null
+  const savedId = localStorage.getItem(BT_PRINTER_KEY)
+  if (savedId && navigator.bluetooth.getDevices) {
+    try {
+      const known = await navigator.bluetooth.getDevices()
+      device = known.find(d => d.id === savedId) ?? null
+    } catch { /* getDevices not supported */ }
+  }
 
-  const server = await device.gatt.connect()
+  if (!device) {
+    // First time or saved printer not found — show picker
+    device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices })
+    localStorage.setItem(BT_PRINTER_KEY, device.id)
+  }
+
+  let server
+  try {
+    server = await device.gatt.connect()
+  } catch {
+    // Auto-connect failed (printer off / out of range) — clear saved and show picker
+    localStorage.removeItem(BT_PRINTER_KEY)
+    device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices })
+    localStorage.setItem(BT_PRINTER_KEY, device.id)
+    server = await device.gatt.connect()
+  }
 
   let characteristic = null
 

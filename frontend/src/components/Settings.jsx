@@ -103,6 +103,16 @@ export default function Settings() {
                 <option value="usb">USB / OTG Thermal</option>
                 <option value="bluetooth">Bluetooth Thermal</option>
               </select>
+              {printCfg.defaultMode === 'bluetooth' && localStorage.getItem('washmitra_bt_printer_id') && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  style={{ marginTop: 6, fontSize: 12 }}
+                  onClick={() => { localStorage.removeItem('washmitra_bt_printer_id'); window.location.reload() }}
+                >
+                  Forget saved printer (pick new one on next print)
+                </button>
+              )}
             </div>
           </div>
           <div className="form-row">
