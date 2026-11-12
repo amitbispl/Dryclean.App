@@ -234,10 +234,14 @@ export default function NewOrder() {
                 {items.map((item, i) => (
                   <tr key={i}>
                     <td>
-                      <select value={item.product_name} onChange={e => updateItem(i, 'product_name', e.target.value)}>
-                        <option value="">-- Select Product --</option>
-                        {products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                      </select>
+                      <input
+                        type="text" list="product-list" placeholder="Type or pick product"
+                        value={item.product_name}
+                        onChange={e => updateItem(i, 'product_name', e.target.value)}
+                      />
+                      <datalist id="product-list">
+                        {products.map(p => <option key={p.id} value={p.name} />)}
+                      </datalist>
                     </td>
                     <td>
                       <select value={item.category} onChange={e => updateItem(i, 'category', e.target.value)}>
