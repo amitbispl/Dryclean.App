@@ -170,9 +170,10 @@ export async function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {
 
     addLine(divider())
     lines.push(ESC, 0x45, 0x01)
-    addLine(twoCol('Total:', sanitize(fmtMoney(detail.total))))
+    addLine(twoCol('Booking Amt:', sanitize(fmtMoney(detail.total))))
     lines.push(ESC, 0x45, 0x00)
-    addLine(twoCol('Advance:', sanitize(fmtMoney(detail.advance))))
+    if (detail.discount > 0) addLine(twoCol('Discount:', '-' + sanitize(fmtMoney(detail.discount))))
+    addLine(twoCol('Received:', sanitize(fmtMoney(detail.advance))))
     addLine(divider('='))
     lines.push(ESC, 0x45, 0x01)
     addLine(twoCol('Balance Due:', sanitize(fmtMoney(detail.balance))))

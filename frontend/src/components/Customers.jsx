@@ -33,7 +33,7 @@ export default function Customers() {
       else { await updateCustomer(form.id, form); toast('Customer updated') }
       setModal(null)
       load()
-    } catch { toast('Failed', 'danger') }
+    } catch (e) { toast(e.response?.data?.message || 'Failed', 'danger') }
     finally { setSaving(false) }
   }
 

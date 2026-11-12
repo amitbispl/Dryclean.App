@@ -98,8 +98,9 @@ export default function Billing() {
         <hr>
         ${(detail.items || []).map(i => `<div class="row"><span>${i.productName} \xd7${i.qty}</span><span>₹${i.amount}</span></div>`).join('')}
         <hr>
-        <div class="row"><span>Subtotal:</span><strong>₹${detail.total}</strong></div>
-        <div class="row"><span>Advance Paid:</span><span>₹${detail.advance}</span></div>
+        <div class="row"><span>Booking Amt:</span><strong>₹${detail.total}</strong></div>
+        ${detail.discount > 0 ? `<div class="row"><span>Discount:</span><span>-₹${detail.discount}</span></div>` : ''}
+        <div class="row"><span>Received:</span><span>₹${detail.advance}</span></div>
         <div class="total"><span>Balance Due:</span><span>₹${detail.balance}</span></div>
         <p style="text-align:center;margin-top:10px;font-size:11px">Payment: ${detail.payMode}</p>
         ${barcodeHtml}
@@ -225,8 +226,9 @@ export default function Billing() {
               <div className="receipt-row" key={i}><span>{it.productName} ×{it.qty}</span><span>{fmtMoney(it.amount)}</span></div>
             ))}
             <hr className="receipt-divider" />
-            <div className="receipt-row"><span>Total</span><strong>{fmtMoney(detail.total)}</strong></div>
-            <div className="receipt-row"><span>Advance Paid</span><span>{fmtMoney(detail.advance)}</span></div>
+            <div className="receipt-row"><span>Booking Amount</span><strong>{fmtMoney(detail.total)}</strong></div>
+            {detail.discount > 0 && <div className="receipt-row"><span>Discount</span><span style={{ color: 'var(--orange)' }}>-{fmtMoney(detail.discount)}</span></div>}
+            <div className="receipt-row"><span>Received (Advance)</span><span style={{ color: 'var(--teal)' }}>{fmtMoney(detail.advance)}</span></div>
             <div className="receipt-total"><span>Balance Due</span><span>{fmtMoney(detail.balance)}</span></div>
             <div style={{ marginTop: 10, fontSize: 11, color: 'var(--gray400)' }}>Payment: {detail.payMode}</div>
           </div>

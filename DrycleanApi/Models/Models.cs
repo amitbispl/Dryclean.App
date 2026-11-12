@@ -71,6 +71,7 @@ public class Order
     public DateOnly EntryDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     public DateOnly DeliveryDate { get; set; }
     public decimal Total { get; set; }
+    public decimal Discount { get; set; } = 0;
     public decimal Advance { get; set; }
     public decimal Balance { get; set; }
     public string PayMode { get; set; } = "Cash";
@@ -79,6 +80,15 @@ public class Order
     public Customer? Customer { get; set; }
     public List<OrderItem> Items { get; set; } = new();
     public List<OrderHistory> History { get; set; } = new();
+}
+
+public class ServiceCategory
+{
+    public int Id { get; set; }
+    public int? CompanyId { get; set; }
+    [Required] public string Name { get; set; } = "";
+    public bool Active { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class SubscriptionPlan
@@ -156,8 +166,10 @@ public record CreateOrderRequest(
     int? CustId, string CustName, string Mobile,
     string CustomerType,
     string EntryDate, string DeliveryDate,
-    decimal Advance, string PayMode,
+    decimal Advance, decimal Discount, string PayMode,
     List<OrderItemDto> Items);
+
+public record CategoryDto(string Name);
 
 public record CreateSubscriptionRequest(int CompanyId, int PlanId, string StartDate, string EndDate, string PaymentMode, decimal AmountPaid, string Status);
 public record UpdateSubscriptionRequest(int PlanId, string StartDate, string EndDate, string PaymentMode, decimal AmountPaid, string Status);

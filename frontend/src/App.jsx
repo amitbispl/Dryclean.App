@@ -15,6 +15,7 @@ import Settings from './components/Settings'
 import Users from './components/Users'
 import Companies from './components/Companies'
 import Subscriptions from './components/Subscriptions'
+import Categories from './components/Categories'
 import Login from './components/Login'
 import { ToastProvider } from './components/Toast'
 import { getOrders } from './api/client'
@@ -70,6 +71,7 @@ function AppRoutes() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/billing" element={<Billing />} />
               <Route path="/products" element={<Products />} />
+              <Route path="/categories" element={<Categories />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/users" element={<Users />} />

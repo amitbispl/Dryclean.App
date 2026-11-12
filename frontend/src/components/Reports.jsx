@@ -52,7 +52,15 @@ export default function Reports() {
             </div>
             <div className="kpi-card">
               <div className="kpi-num" style={{ color: 'var(--green)' }}>{fmtMoney(report.total_amount)}</div>
-              <div className="kpi-lbl">Total Revenue</div>
+              <div className="kpi-lbl">Booking Amount</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-num" style={{ color: 'var(--orange)' }}>{fmtMoney(report.total_discount || 0)}</div>
+              <div className="kpi-lbl">Total Discount</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-num" style={{ color: 'var(--teal)' }}>{fmtMoney(report.total_advance)}</div>
+              <div className="kpi-lbl">Received Amount</div>
             </div>
             <div className="kpi-card">
               <div className="kpi-num" style={{ color: 'var(--red)' }}>{fmtMoney(report.total_balance)}</div>
@@ -65,18 +73,19 @@ export default function Reports() {
               <div className="panel-head"><div className="panel-title">Daily Sales</div></div>
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Date</th><th>Orders</th><th>Revenue</th><th>Advance</th><th>Balance</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Orders</th><th>Booking</th><th>Discount</th><th>Received</th><th>Balance</th></tr></thead>
                   <tbody>
                     {report.rows.map((r, i) => (
                       <tr key={i}>
                         <td>{fmtDate(r.date)}</td>
                         <td>{r.orders}</td>
                         <td style={{ fontWeight: 600 }}>{fmtMoney(r.amount)}</td>
-                        <td>{fmtMoney(r.advance)}</td>
+                        <td style={{ color: 'var(--orange)' }}>{fmtMoney(r.discount || 0)}</td>
+                        <td style={{ color: 'var(--teal)' }}>{fmtMoney(r.advance)}</td>
                         <td style={{ color: r.balance > 0 ? 'var(--red)' : 'var(--green)' }}>{fmtMoney(r.balance)}</td>
                       </tr>
                     ))}
-                    {!report.rows.length && <tr><td colSpan={5} style={{ textAlign: 'center', padding: 20, color: 'var(--gray400)' }}>No data</td></tr>}
+                    {!report.rows.length && <tr><td colSpan={6} style={{ textAlign: 'center', padding: 20, color: 'var(--gray400)' }}>No data</td></tr>}
                   </tbody>
                 </table>
               </div>

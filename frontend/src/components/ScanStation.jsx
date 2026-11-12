@@ -389,11 +389,13 @@ export default function ScanStation() {
             <span className={`badge ${statusBadgeClass(order.status)}`} style={{ fontSize: 13, padding: '4px 12px' }}>{order.status}</span>
           </div>
 
-          <div style={{ padding: '12px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 8 }}>
+          <div style={{ padding: '12px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))', gap: 8 }}>
             <div><div style={{ fontSize: 11, color: 'var(--gray400)' }}>Entry Date</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmtDate(order.entryDate)}</div></div>
             <div><div style={{ fontSize: 11, color: 'var(--gray400)' }}>Delivery</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmtDate(order.deliveryDate)}</div></div>
-            <div><div style={{ fontSize: 11, color: 'var(--gray400)' }}>Total</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmtMoney(order.total)}</div></div>
-            <div><div style={{ fontSize: 11, color: 'var(--gray400)' }}>Balance</div><div style={{ fontSize: 13, fontWeight: 600, color: order.balance > 0 ? 'var(--red)' : 'var(--green)' }}>{fmtMoney(order.balance)}</div></div>
+            <div><div style={{ fontSize: 11, color: 'var(--gray400)' }}>Booking Amt</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmtMoney(order.total)}</div></div>
+            {order.discount > 0 && <div><div style={{ fontSize: 11, color: 'var(--gray400)' }}>Discount</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--orange)' }}>-{fmtMoney(order.discount)}</div></div>}
+            <div><div style={{ fontSize: 11, color: 'var(--gray400)' }}>Received</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--teal)' }}>{fmtMoney(order.advance)}</div></div>
+            <div><div style={{ fontSize: 11, color: 'var(--gray400)' }}>Balance Due</div><div style={{ fontSize: 15, fontWeight: 800, color: order.balance > 0 ? 'var(--red)' : 'var(--green)' }}>{fmtMoney(order.balance)}</div></div>
           </div>
 
           {(order.items || []).length > 0 && (

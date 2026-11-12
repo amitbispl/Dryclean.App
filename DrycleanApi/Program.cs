@@ -448,7 +448,10 @@ app.MapGet("/api/customers", async (AppDbContext db, ClaimsPrincipal claims) =>
 
 app.MapPost("/api/customers", async (AppDbContext db, ClaimsPrincipal claims, Customer customer, HttpContext http) =>
 {
-    customer.CompanyId = GetCompanyId(claims);
+    var companyId = GetCompanyId(claims);
+    if (companyId.HasValue && await db.Customers.AnyAsync(c => c.CompanyId == companyId && c.Mobile == customer.Mobile))
+        return Results.Conflict(new { message = "Mobile number already registered" });
+    customer.CompanyId = companyId;
     customer.RegDate = DateOnly.FromDateTime(DateTime.Today);
     customer.CreatedAt = DateTime.UtcNow;
     customer.CreatedBy = GetUserName(claims);
@@ -473,6 +476,9 @@ app.MapPut("/api/customers/{id:int}", async (AppDbContext db, ClaimsPrincipal cl
     var c = await db.Customers.FindAsync(id);
     if (c is null) return Results.NotFound();
     if (companyId.HasValue && c.CompanyId != companyId) return Results.Forbid();
+    if (companyId.HasValue && input.Mobile != c.Mobile &&
+        await db.Customers.AnyAsync(x => x.CompanyId == companyId && x.Mobile == input.Mobile && x.Id != id))
+        return Results.Conflict(new { message = "Mobile number already registered" });
     c.Name = input.Name; c.Mobile = input.Mobile; c.Address = input.Address; c.Email = input.Email;
     c.CustomerType = input.CustomerType ?? c.CustomerType;
     await db.SaveChangesAsync();
@@ -555,7 +561,7 @@ app.MapPost("/api/orders", async (AppDbContext db, ClaimsPrincipal claims, Creat
     var seq = await db.Database.SqlQueryRaw<long>("SELECT nextval('order_num_seq') AS \"Value\"").FirstAsync();
     var orderId = $"DC{seq}";
     var total = req.Items.Sum(i => i.Amount);
-    var balance = Math.Max(0, total - req.Advance);
+    var balance = Math.Max(0, total - req.Discount - req.Advance);
 
     var order = new Order
     {
@@ -568,6 +574,7 @@ app.MapPost("/api/orders", async (AppDbContext db, ClaimsPrincipal claims, Creat
         EntryDate = DateOnly.Parse(req.EntryDate),
         DeliveryDate = DateOnly.Parse(req.DeliveryDate),
         Total = total,
+        Discount = req.Discount,
         Advance = req.Advance,
         Balance = balance,
         PayMode = req.PayMode,
@@ -629,11 +636,11 @@ app.MapGet("/api/reports/sales", async (AppDbContext db, ClaimsPrincipal claims,
     var orders = await q.ToListAsync();
 
     var rows = orders.GroupBy(o => o.EntryDate).OrderByDescending(g => g.Key)
-        .Select(g => new { date = g.Key.ToString("yyyy-MM-dd"), orders = g.Count(), amount = g.Sum(o => o.Total), advance = g.Sum(o => o.Advance), balance = g.Sum(o => o.Balance) }).ToList();
+        .Select(g => new { date = g.Key.ToString("yyyy-MM-dd"), orders = g.Count(), amount = g.Sum(o => o.Total), discount = g.Sum(o => o.Discount), advance = g.Sum(o => o.Advance), balance = g.Sum(o => o.Balance) }).ToList();
     var serviceRows = orders.SelectMany(o => o.Items).GroupBy(i => i.Category)
         .Select(g => new { category = g.Key, items = g.Count(), revenue = g.Sum(i => i.Amount) }).OrderByDescending(x => x.revenue).ToList();
 
-    return Results.Ok(new { from_date = from.ToString("yyyy-MM-dd"), to_date = to.ToString("yyyy-MM-dd"), total_orders = orders.Count, total_amount = orders.Sum(o => o.Total), total_advance = orders.Sum(o => o.Advance), total_balance = orders.Sum(o => o.Balance), rows, service_rows = serviceRows });
+    return Results.Ok(new { from_date = from.ToString("yyyy-MM-dd"), to_date = to.ToString("yyyy-MM-dd"), total_orders = orders.Count, total_amount = orders.Sum(o => o.Total), total_discount = orders.Sum(o => o.Discount), total_advance = orders.Sum(o => o.Advance), total_balance = orders.Sum(o => o.Balance), rows, service_rows = serviceRows });
 }).RequireAuthorization();
 
 app.MapGet("/api/reports/delivery", async (AppDbContext db, ClaimsPrincipal claims, string? filter) =>
@@ -795,6 +802,51 @@ app.MapPut("/api/subscriptions/{id:int}", async (AppDbContext db, ClaimsPrincipa
     sub.AmountPaid = req.AmountPaid;
     await db.SaveChangesAsync();
     return Results.Ok(sub);
+}).RequireAuthorization();
+
+// ─── CATEGORIES ───────────────────────────────────────────────────────────────
+app.MapGet("/api/categories", async (AppDbContext db, ClaimsPrincipal claims) =>
+{
+    var companyId = GetCompanyId(claims);
+    var q = db.ServiceCategories.AsQueryable();
+    if (companyId.HasValue) q = q.Where(c => c.CompanyId == companyId);
+    return Results.Ok(await q.OrderBy(c => c.Name).ToListAsync());
+}).RequireAuthorization();
+
+app.MapPost("/api/categories", async (AppDbContext db, ClaimsPrincipal claims, CategoryDto req) =>
+{
+    var companyId = GetCompanyId(claims);
+    if (string.IsNullOrWhiteSpace(req.Name)) return Results.BadRequest(new { message = "Name required" });
+    if (await db.ServiceCategories.AnyAsync(c => c.CompanyId == companyId && c.Name == req.Name.Trim()))
+        return Results.Conflict(new { message = "Category already exists" });
+    var cat = new ServiceCategory { CompanyId = companyId, Name = req.Name.Trim(), Active = true, CreatedAt = DateTime.UtcNow };
+    db.ServiceCategories.Add(cat);
+    await db.SaveChangesAsync();
+    return Results.Created($"/api/categories/{cat.Id}", cat);
+}).RequireAuthorization();
+
+app.MapPut("/api/categories/{id:int}", async (AppDbContext db, ClaimsPrincipal claims, int id, CategoryDto req) =>
+{
+    var companyId = GetCompanyId(claims);
+    var cat = await db.ServiceCategories.FindAsync(id);
+    if (cat is null) return Results.NotFound();
+    if (companyId.HasValue && cat.CompanyId != companyId) return Results.Forbid();
+    if (await db.ServiceCategories.AnyAsync(c => c.CompanyId == companyId && c.Name == req.Name.Trim() && c.Id != id))
+        return Results.Conflict(new { message = "Category name already exists" });
+    cat.Name = req.Name.Trim();
+    await db.SaveChangesAsync();
+    return Results.Ok(cat);
+}).RequireAuthorization();
+
+app.MapDelete("/api/categories/{id:int}", async (AppDbContext db, ClaimsPrincipal claims, int id) =>
+{
+    var companyId = GetCompanyId(claims);
+    var cat = await db.ServiceCategories.FindAsync(id);
+    if (cat is null) return Results.NotFound();
+    if (companyId.HasValue && cat.CompanyId != companyId) return Results.Forbid();
+    cat.Active = false;
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = "deleted" });
 }).RequireAuthorization();
 
 app.Run();

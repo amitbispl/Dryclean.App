@@ -12,7 +12,7 @@ function initials(name) {
 const pageTitles = {
   '/': 'Dashboard', '/new-order': 'New Order', '/orders': 'All Orders',
   '/scan': 'Scan Station', '/status': 'Order Status', '/delivery': 'Delivery Management', '/reports': 'Sales Report',
-  '/billing': 'Billing', '/products': 'Products', '/customers': 'Customers',
+  '/billing': 'Billing', '/products': 'Products', '/categories': 'Categories', '/customers': 'Customers',
   '/settings': 'Settings', '/users': 'Users', '/companies': 'Companies', '/subscriptions': 'Subscriptions'
 }
 
@@ -76,6 +76,7 @@ export default function Layout({ children, overdueCnt = 0 }) {
         <div className="nav-group">
           <div className="nav-label">Setup</div>
           <NavItem path="/products" label="Products" icon={<svg viewBox="0 0 24 24"><path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.57a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.57a2 2 0 0 0-1.34-2.23z"/></svg>} />
+          <NavItem path="/categories" label="Categories" icon={<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>} />
           <NavItem path="/customers" label="Customers" icon={<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>} />
           <NavItem path="/users" label="Users" icon={<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>} />
           {isSuperAdmin && <NavItem path="/companies" label="Companies" icon={<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>} />}

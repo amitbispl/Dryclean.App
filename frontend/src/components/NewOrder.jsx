@@ -17,7 +17,7 @@ export default function NewOrder() {
     custId: '', custName: '', mobile: '', customerType: 'Regular',
     entryDate: today(),
     deliveryDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
-    advance: 0, payMode: 'Cash',
+    advance: 0, discount: 0, payMode: 'Cash',
   })
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function NewOrder() {
   }, [])
 
   const total = items.reduce((a, i) => a + (i.amount || 0), 0)
-  const balance = Math.max(0, total - (parseFloat(form.advance) || 0))
+  const balance = Math.max(0, total - (parseFloat(form.discount) || 0) - (parseFloat(form.advance) || 0))
 
   function onCustSelect(val) {
     if (val === 'new') {
@@ -50,12 +50,13 @@ export default function NewOrder() {
     setItems(prev => prev.map((item, idx) => {
       if (idx !== i) return item
       const updated = { ...item, [field]: val }
-      if (field === 'product_id') {
-        const p = products.find(x => x.id == val)
-        if (p) { updated.product_name = p.name; updated.category = p.category; updated.rate = p.price; updated.amount = p.price * item.qty }
+      if (field === 'product_name') {
+        const p = products.find(x => x.name === val)
+        if (p) { updated.category = p.category; updated.rate = p.price; updated.amount = p.price * item.qty }
       }
       if (field === 'qty') updated.amount = updated.rate * (parseFloat(val) || 1)
       if (field === 'rate') updated.amount = (parseFloat(val) || 0) * updated.qty
+      if (field === 'amount') updated.amount = parseFloat(val) || 0
       return updated
     }))
   }
@@ -67,8 +68,16 @@ export default function NewOrder() {
     try {
       let custId = form.custId ? parseInt(form.custId) : null
       if (!custId && form.custName) {
-        const nc = await createCustomer({ name: form.custName, mobile: form.mobile, address: '', email: '' })
-        custId = nc.id
+        try {
+          const nc = await createCustomer({ name: form.custName, mobile: form.mobile, address: '', email: '' })
+          custId = nc.id
+        } catch (ce) {
+          if (ce.response?.status === 409) {
+            // Mobile already registered — look up existing customer
+            const existing = customers.find(x => x.mobile === form.mobile)
+            if (existing) custId = existing.id
+          } else { throw ce }
+        }
       }
       const order = await createOrder({
         custId: custId,
@@ -78,8 +87,9 @@ export default function NewOrder() {
         entryDate: form.entryDate,
         deliveryDate: form.deliveryDate,
         advance: parseFloat(form.advance) || 0,
+        discount: parseFloat(form.discount) || 0,
         payMode: form.payMode,
-        items: items.map(({ product_name, category, qty, rate, amount }) => ({ productName: product_name, category, qty: parseInt(qty), rate: parseFloat(rate), amount: parseFloat(amount) })),
+        items: items.map(({ product_name, category, qty, rate, amount }) => ({ productName: product_name, category: category || 'General', qty: parseInt(qty) || 1, rate: parseFloat(rate), amount: parseFloat(amount) })),
       })
       toast('Order saved successfully!')
       await autoPrintOrder(order)
@@ -126,6 +136,7 @@ export default function NewOrder() {
             ${(detail.items || []).map(i => `<div class="row"><span>${i.productName} \xd7${i.qty}</span><span>₹${i.amount}</span></div>`).join('')}
             <hr>
             <div class="row"><span>Total:</span><strong>₹${detail.total}</strong></div>
+            ${detail.discount > 0 ? `<div class="row"><span>Discount:</span><span>-₹${detail.discount}</span></div>` : ''}
             <div class="row"><span>Advance:</span><span>₹${detail.advance}</span></div>
             <div class="total"><span>Balance Due:</span><span>₹${detail.balance}</span></div>
             <p style="text-align:center;font-size:10px;margin-top:10px">${footerText}</p>
@@ -214,22 +225,26 @@ export default function NewOrder() {
           <button className="btn btn-outline btn-sm" onClick={addItem}>+ Add Item</button>
         </div>
         <div className="panel-body">
+          <datalist id="product-list">
+            {products.map(p => <option key={p.id} value={p.name}>{p.category}</option>)}
+          </datalist>
           <div className="table-wrap">
             <table className="prod-table">
-              <thead><tr><th style={{ width: '35%' }}>Product</th><th style={{ width: '15%' }}>Category</th><th style={{ width: '12%' }}>Qty</th><th style={{ width: '15%' }}>Rate (₹)</th><th style={{ width: '15%' }}>Amount</th><th style={{ width: '8%' }}>Del</th></tr></thead>
+              <thead><tr><th style={{ width: '30%' }}>Product Name</th><th style={{ width: '15%' }}>Category</th><th style={{ width: '12%' }}>Qty</th><th style={{ width: '15%' }}>Rate (₹)</th><th style={{ width: '15%' }}>Amount (₹)</th><th style={{ width: '8%' }}>Del</th></tr></thead>
               <tbody>
                 {items.map((item, i) => (
                   <tr key={i}>
                     <td>
-                      <select value={item.product_id || ''} onChange={e => updateItem(i, 'product_id', e.target.value)}>
-                        <option value="">-- Select --</option>
-                        {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.category})</option>)}
-                      </select>
+                      <input
+                        type="text" list="product-list" placeholder="Type or pick product"
+                        value={item.product_name}
+                        onChange={e => updateItem(i, 'product_name', e.target.value)}
+                      />
                     </td>
-                    <td><input type="text" value={item.category} readOnly /></td>
+                    <td><input type="text" value={item.category} placeholder="Category" onChange={e => updateItem(i, 'category', e.target.value)} /></td>
                     <td><input type="number" value={item.qty} min={1} onChange={e => updateItem(i, 'qty', e.target.value)} /></td>
                     <td><input type="number" value={item.rate} onChange={e => updateItem(i, 'rate', e.target.value)} /></td>
-                    <td><input type="number" value={item.amount} readOnly style={{ fontWeight: 700 }} /></td>
+                    <td><input type="number" value={item.amount} onChange={e => updateItem(i, 'amount', e.target.value)} style={{ fontWeight: 700 }} /></td>
                     <td><button className="btn btn-danger btn-sm" onClick={() => removeItem(i)}>✕</button></td>
                   </tr>
                 ))}
@@ -249,6 +264,10 @@ export default function NewOrder() {
               <input type="number" value={total} readOnly style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)' }} />
             </div>
             <div className="form-group">
+              <label>Discount (₹)</label>
+              <input type="number" value={form.discount} min={0} onChange={e => setForm(f => ({ ...f, discount: e.target.value }))} placeholder="0" />
+            </div>
+            <div className="form-group">
               <label>Advance Payment (₹)</label>
               <input type="number" value={form.advance} onChange={e => setForm(f => ({ ...f, advance: e.target.value }))} />
             </div>
@@ -256,6 +275,8 @@ export default function NewOrder() {
               <label>Balance Amount (₹)</label>
               <input type="number" value={balance} readOnly />
             </div>
+          </div>
+          <div className="form-row-4" style={{ marginTop: 10 }}>
             <div className="form-group">
               <label>Payment Mode</label>
               <select value={form.payMode} onChange={e => setForm(f => ({ ...f, payMode: e.target.value }))}>

@@ -152,8 +152,9 @@ export default function Orders() {
               <div className="receipt-row" key={i}><span>{it.productName} ×{it.qty}</span><span>{fmtMoney(it.amount)}</span></div>
             ))}
             <hr className="receipt-divider" />
-            <div className="receipt-row"><span>Total</span><strong>{fmtMoney(detailOrder.total)}</strong></div>
-            <div className="receipt-row"><span>Advance</span><span>{fmtMoney(detailOrder.advance)}</span></div>
+            <div className="receipt-row"><span>Booking Amount</span><strong>{fmtMoney(detailOrder.total)}</strong></div>
+            {detailOrder.discount > 0 && <div className="receipt-row"><span>Discount</span><span style={{ color: 'var(--orange)' }}>-{fmtMoney(detailOrder.discount)}</span></div>}
+            <div className="receipt-row"><span>Received (Advance)</span><span style={{ color: 'var(--teal)' }}>{fmtMoney(detailOrder.advance)}</span></div>
             <div className="receipt-total"><span>Balance Due</span><span>{fmtMoney(detailOrder.balance)}</span></div>
             <div style={{ marginTop: 12, fontSize: 11, color: 'var(--gray400)' }}>Payment: {detailOrder.payMode}</div>
             {detailOrder.history?.length > 0 && (

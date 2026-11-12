@@ -221,11 +221,19 @@ namespace DrycleanApi.Migrations
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("")
+                        .HasColumnName("created_by");
 
                     b.Property<string>("CreatedByIp")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("")
+                        .HasColumnName("created_by_ip");
 
                     b.Property<string>("CustomerType")
                         .IsRequired()
@@ -259,6 +267,10 @@ namespace DrycleanApi.Migrations
                         .HasColumnName("reg_date");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "Mobile")
+                        .IsUnique()
+                        .HasFilter("company_id IS NOT NULL");
 
                     b.ToTable("customers", (string)null);
                 });
@@ -310,6 +322,12 @@ namespace DrycleanApi.Migrations
                     b.Property<DateOnly>("DeliveryDate")
                         .HasColumnType("date")
                         .HasColumnName("delivery_date");
+
+                    b.Property<decimal>("Discount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(10,2)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("discount");
 
                     b.Property<DateOnly>("EntryDate")
                         .HasColumnType("date")
@@ -484,6 +502,38 @@ namespace DrycleanApi.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("products", (string)null);
+                });
+
+            modelBuilder.Entity("DrycleanApi.Models.ServiceCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<int?>("CompanyId")
+                        .HasColumnType("integer")
+                        .HasColumnName("company_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("service_categories", (string)null);
                 });
 
             modelBuilder.Entity("DrycleanApi.Models.Setting", b =>
