@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
-import { getProducts, createProduct, updateProduct, deleteProduct } from '../api/client'
+import { getProducts, createProduct, updateProduct, deleteProduct, getCategories } from '../api/client'
 import { fmtMoney } from '../utils'
 import Modal from './Modal'
 import { useToast } from './Toast'
 
-const CATEGORIES = ['Dry Clean', 'Rafu', 'Charak', 'Other']
 const EMOJIS = { 'Dry Clean': '👔', Rafu: '🪡', Charak: '✂️', Other: '📦' }
-const EMPTY = { name: '', category: 'Dry Clean', price: 0, emoji: '👔', active: true }
+const EMPTY = { name: '', category: '', price: 0, emoji: '', active: true }
 
 export default function Products() {
   const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(EMPTY)
@@ -18,7 +18,10 @@ export default function Products() {
   const toast = useToast()
 
   const load = () => getProducts().then(setProducts).finally(() => setLoading(false))
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    getCategories().then(d => setCategories(d.filter(c => c.active)))
+  }, [])
 
   function openAdd() { setForm({ ...EMPTY }); setModal('add') }
   function openEdit(p) { setForm({ ...p }); setModal('edit') }
@@ -63,10 +66,10 @@ export default function Products() {
         <button className="btn btn-primary" onClick={openAdd}>+ Add Product</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         <button className={`btn btn-sm ${!catFilter ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCatFilter('')}>All</button>
-        {CATEGORIES.map(c => (
-          <button key={c} className={`btn btn-sm ${catFilter === c ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCatFilter(c)}>{c}</button>
+        {categories.map(c => (
+          <button key={c.id} className={`btn btn-sm ${catFilter === c.name ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCatFilter(c.name)}>{c.name}</button>
         ))}
       </div>
 
@@ -103,7 +106,8 @@ export default function Products() {
             <div className="form-group">
               <label>Category</label>
               <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value, emoji: EMOJIS[e.target.value] || f.emoji }))}>
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                <option value="">-- Select --</option>
+                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
           </div>
