@@ -382,56 +382,61 @@ export async function buildEscPosTag(detail, fmtDate, settings = {}) {
   return new Uint8Array(lines)
 }
 
+// Browser print tag — 2" × 1" label size
 export function printBrowserTag(detail, fmtDate, settings = {}) {
   const shopName = settings.shopName || 'WashMitra'
-  const barcodeValue = detail.mobile
-    ? `${detail.id}-${detail.mobile}`
-    : detail.id
+  const barcodeValue = detail.id  // order ID only — keeps barcode short and readable
 
-  const itemsHtml = (detail.items || [])
-    .map(it => `<div class="item">${it.productName} &times;${it.qty}</div>`)
-    .join('')
+  const itemsSummary = (detail.items || [])
+    .map(it => `${it.productName}×${it.qty}`)
+    .join(', ')
 
   const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Packing Tag — ${detail.id}</title>
+<title>Tag — ${detail.id}</title>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
 <style>
-  @page { size: 58mm auto; margin: 2mm; }
-  body { font-family: 'Courier New', monospace; font-size: 11px; margin: 0; padding: 4px; width: 54mm; }
-  h1 { font-size: 13px; text-align: center; margin: 0 0 2px; }
-  .sub { text-align: center; font-size: 10px; border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 6px; }
-  .order-id { font-size: 22px; font-weight: 900; text-align: center; letter-spacing: 1px; margin: 4px 0; }
-  .row { display: flex; justify-content: space-between; margin: 1px 0; }
-  .label { color: #555; }
-  .divider { border-top: 1px dashed #000; margin: 4px 0; }
-  .item { font-size: 10px; }
-  svg { display: block; margin: 4px auto; }
+  @page { size: 2in 1in; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, sans-serif;
+    width: 2in; height: 1in;
+    overflow: hidden;
+    padding: 2mm 2mm 1mm 2mm;
+  }
+  .header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 0.5px solid #000; padding-bottom: 1px; margin-bottom: 2px;
+  }
+  .shop { font-size: 7px; color: #555; }
+  .order-id { font-size: 11px; font-weight: 900; letter-spacing: 0.5px; }
+  .info { font-size: 7px; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .items { font-size: 6.5px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+  svg { display: block; }
 </style>
 </head>
 <body>
-<h1>${shopName}</h1>
-<div class="sub">PACKING TAG</div>
-<div class="order-id">${detail.id}</div>
-<div class="row"><span class="label">Customer:</span><span>${detail.custName || ''}</span></div>
-<div class="row"><span class="label">Mobile:</span><span>${detail.mobile || ''}</span></div>
-<div class="row"><span class="label">Delivery:</span><span>${fmtDate(detail.deliveryDate)}</span></div>
-${itemsHtml ? `<div class="divider"></div>${itemsHtml}` : ''}
-<div class="divider"></div>
+<div class="header">
+  <span class="shop">${shopName}</span>
+  <span class="order-id">${detail.id}</span>
+</div>
+<div class="info">${detail.custName || ''} &nbsp;|&nbsp; ${detail.mobile || ''} &nbsp;|&nbsp; ${fmtDate(detail.deliveryDate)}</div>
+${itemsSummary ? `<div class="items">${itemsSummary}</div>` : ''}
 <svg id="bc"></svg>
 <script>
   JsBarcode('#bc', '${barcodeValue}', {
-    format: 'CODE128', width: 1.5, height: 40,
-    displayValue: true, fontSize: 10, margin: 2,
+    format: 'CODE128', width: 1.2, height: 18,
+    displayValue: true, fontSize: 7, margin: 1,
+    textMargin: 1,
   });
   window.onload = () => window.print();
 <\/script>
 </body>
 </html>`
 
-  const win = window.open('', '_blank', 'width=400,height=600')
+  const win = window.open('', '_blank', 'width=300,height=200')
   if (win) {
     win.document.write(html)
     win.document.close()

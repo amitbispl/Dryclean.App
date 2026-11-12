@@ -176,7 +176,18 @@ export default function NewOrder() {
             </div>
             <div className="form-group">
               <label>Mobile No</label>
-              <input type="text" placeholder="10 digit mobile" maxLength={10} value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))} />
+              <input
+                type="text" placeholder="10 digit mobile" maxLength={10}
+                value={form.mobile}
+                onChange={e => {
+                  const val = e.target.value
+                  setForm(f => ({ ...f, mobile: val }))
+                  if (val.length === 10) {
+                    const c = customers.find(x => x.mobile === val)
+                    if (c) setForm(f => ({ ...f, mobile: val, custId: c.id, custName: c.name, customerType: c.customerType || 'Regular' }))
+                  }
+                }}
+              />
             </div>
           </div>
           <div className="form-row">
