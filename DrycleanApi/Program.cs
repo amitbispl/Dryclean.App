@@ -629,12 +629,17 @@ app.MapPost("/api/categories/seed", async (AppDbContext db, ClaimsPrincipal clai
 {
     var companyId = GetCompanyId(claims);
     var defaults = new[] { "Dry Clean", "Wash", "Press / Iron", "Rafu", "Charak", "Stain Removal", "Alteration" };
+    // Also pick up any categories already used in existing products
+    var fromProducts = await db.Products
+        .Where(p => p.CompanyId == companyId && p.Category != null && p.Category != "")
+        .Select(p => p.Category).Distinct().ToListAsync();
+    var allNames = defaults.Concat(fromProducts).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     var existing = await db.ServiceCategories.Where(c => c.CompanyId == companyId).Select(c => c.Name).ToListAsync();
-    var toAdd = defaults.Where(d => !existing.Contains(d, StringComparer.OrdinalIgnoreCase))
-        .Select(n => new ServiceCategory { CompanyId = companyId, Name = n, Active = true, CreatedAt = DateTime.UtcNow });
+    var toAdd = allNames.Where(d => !existing.Contains(d, StringComparer.OrdinalIgnoreCase))
+        .Select(n => new ServiceCategory { CompanyId = companyId, Name = n!, Active = true, CreatedAt = DateTime.UtcNow });
     db.ServiceCategories.AddRange(toAdd);
     await db.SaveChangesAsync();
-    return Results.Ok(new { message = "Default categories loaded" });
+    return Results.Ok(new { message = $"Categories loaded: {existing.Count + toAdd.Count()}" });
 }).RequireAuthorization();
 
 // ─── PAYMENT UPDATE ───────────────────────────────────────────────────────────
