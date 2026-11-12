@@ -6,6 +6,7 @@ async function getCategories() { return api.get('/categories').then(r => r.data)
 async function createCategory(name) { return api.post('/categories', { name }).then(r => r.data) }
 async function updateCategory(id, name) { return api.put(`/categories/${id}`, { name }).then(r => r.data) }
 async function deleteCategory(id) { return api.delete(`/categories/${id}`).then(r => r.data) }
+async function seedCategories() { return api.post('/categories/seed').then(r => r.data) }
 
 export default function Categories() {
   const toast = useToast()
@@ -13,6 +14,7 @@ export default function Categories() {
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
+  const [seeding, setSeeding] = useState(false)
   const [editId, setEditId] = useState(null)
   const [editName, setEditName] = useState('')
 
@@ -22,6 +24,17 @@ export default function Categories() {
   }
 
   useEffect(() => { load() }, [])
+
+  async function handleSeed() {
+    setSeeding(true)
+    try {
+      await seedCategories()
+      toast('Default categories loaded')
+      load()
+    } catch (e) {
+      toast(e.response?.data?.message || 'Failed', 'danger')
+    } finally { setSeeding(false) }
+  }
 
   async function handleAdd() {
     if (!newName.trim()) { toast('Enter a category name', 'danger'); return }
@@ -82,7 +95,12 @@ export default function Categories() {
       </div>
 
       <div className="panel">
-        <div className="panel-head"><div className="panel-title">Categories ({categories.filter(c => c.active).length})</div></div>
+        <div className="panel-head">
+          <div className="panel-title">Categories ({categories.length})</div>
+          <button className="btn btn-outline btn-sm" onClick={handleSeed} disabled={seeding}>
+            {seeding ? 'Loading...' : 'Load Defaults'}
+          </button>
+        </div>
         {loading ? <div className="loading" style={{ padding: 20 }}>Loading...</div> : (
           <div className="table-wrap">
             <table>

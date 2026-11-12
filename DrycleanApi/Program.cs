@@ -624,6 +624,32 @@ app.MapPut("/api/orders/{id}/status", async (AppDbContext db, ClaimsPrincipal cl
     return Results.Ok(new { message = "status updated", status = req.Status });
 }).RequireAuthorization();
 
+// ─── CATEGORY SEED ────────────────────────────────────────────────────────────
+app.MapPost("/api/categories/seed", async (AppDbContext db, ClaimsPrincipal claims) =>
+{
+    var companyId = GetCompanyId(claims);
+    var defaults = new[] { "Dry Clean", "Wash", "Press / Iron", "Rafu", "Charak", "Stain Removal", "Alteration" };
+    var existing = await db.ServiceCategories.Where(c => c.CompanyId == companyId).Select(c => c.Name).ToListAsync();
+    var toAdd = defaults.Where(d => !existing.Contains(d, StringComparer.OrdinalIgnoreCase))
+        .Select(n => new ServiceCategory { CompanyId = companyId, Name = n, Active = true, CreatedAt = DateTime.UtcNow });
+    db.ServiceCategories.AddRange(toAdd);
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = "Default categories loaded" });
+}).RequireAuthorization();
+
+// ─── PAYMENT UPDATE ───────────────────────────────────────────────────────────
+app.MapPatch("/api/orders/{id}/payment", async (AppDbContext db, ClaimsPrincipal claims, string id, PaymentRequest req) =>
+{
+    var companyId = GetCompanyId(claims);
+    var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == id && o.CompanyId == companyId);
+    if (order is null) return Results.NotFound();
+    if (req.Amount <= 0) return Results.BadRequest(new { message = "Amount must be greater than 0" });
+    order.Advance += req.Amount;
+    order.Balance = Math.Max(0, order.Total - order.Discount - order.Advance);
+    await db.SaveChangesAsync();
+    return Results.Ok(new { advance = order.Advance, balance = order.Balance });
+}).RequireAuthorization();
+
 // ─── REPORTS ──────────────────────────────────────────────────────────────────
 app.MapGet("/api/reports/sales", async (AppDbContext db, ClaimsPrincipal claims, string? from_date, string? to_date) =>
 {

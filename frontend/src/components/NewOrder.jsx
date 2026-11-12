@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getCustomers, getProducts, createOrder, createCustomer } from '../api/client'
+import { getCustomers, getProducts, createOrder, createCustomer, getCategories } from '../api/client'
 import { today, fmtDate, fmtMoney } from '../utils'
 import { useToast } from './Toast'
 import { loadPrintSettings } from '../utils/printSettings'
@@ -11,6 +11,7 @@ export default function NewOrder() {
   const toast = useToast()
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
   const [items, setItems] = useState([])
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
@@ -23,6 +24,7 @@ export default function NewOrder() {
   useEffect(() => {
     getCustomers().then(setCustomers)
     getProducts().then(d => setProducts(d.filter(p => p.active)))
+    getCategories().then(d => setCategories(d.filter(c => c.active)))
   }, [])
 
   const total = items.reduce((a, i) => a + (i.amount || 0), 0)
@@ -225,23 +227,24 @@ export default function NewOrder() {
           <button className="btn btn-outline btn-sm" onClick={addItem}>+ Add Item</button>
         </div>
         <div className="panel-body">
-          <datalist id="product-list">
-            {products.map(p => <option key={p.id} value={p.name}>{p.category}</option>)}
-          </datalist>
-          <div className="table-wrap">
+            <div className="table-wrap">
             <table className="prod-table">
               <thead><tr><th style={{ width: '30%' }}>Product Name</th><th style={{ width: '15%' }}>Category</th><th style={{ width: '12%' }}>Qty</th><th style={{ width: '15%' }}>Rate (₹)</th><th style={{ width: '15%' }}>Amount (₹)</th><th style={{ width: '8%' }}>Del</th></tr></thead>
               <tbody>
                 {items.map((item, i) => (
                   <tr key={i}>
                     <td>
-                      <input
-                        type="text" list="product-list" placeholder="Type or pick product"
-                        value={item.product_name}
-                        onChange={e => updateItem(i, 'product_name', e.target.value)}
-                      />
+                      <select value={item.product_name} onChange={e => updateItem(i, 'product_name', e.target.value)}>
+                        <option value="">-- Select Product --</option>
+                        {products.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                      </select>
                     </td>
-                    <td><input type="text" value={item.category} placeholder="Category" onChange={e => updateItem(i, 'category', e.target.value)} /></td>
+                    <td>
+                      <select value={item.category} onChange={e => updateItem(i, 'category', e.target.value)}>
+                        <option value="">-- Select --</option>
+                        {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </td>
                     <td><input type="number" value={item.qty} min={1} onChange={e => updateItem(i, 'qty', e.target.value)} /></td>
                     <td><input type="number" value={item.rate} onChange={e => updateItem(i, 'rate', e.target.value)} /></td>
                     <td><input type="number" value={item.amount} onChange={e => updateItem(i, 'amount', e.target.value)} style={{ fontWeight: 700 }} /></td>

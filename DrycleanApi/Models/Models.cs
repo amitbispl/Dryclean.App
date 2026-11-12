@@ -170,6 +170,7 @@ public record CreateOrderRequest(
     List<OrderItemDto> Items);
 
 public record CategoryDto(string Name);
+public record PaymentRequest(decimal Amount);
 
 public record CreateSubscriptionRequest(int CompanyId, int PlanId, string StartDate, string EndDate, string PaymentMode, decimal AmountPaid, string Status);
 public record UpdateSubscriptionRequest(int PlanId, string StartDate, string EndDate, string PaymentMode, decimal AmountPaid, string Status);

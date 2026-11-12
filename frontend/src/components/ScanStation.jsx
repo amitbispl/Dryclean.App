@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { getOrder, getOrders, updateOrderStatus, getSettings } from '../api/client'
+import { getOrder, getOrders, updateOrderStatus, getSettings, updateOrderPayment } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass } from '../utils'
 import { useToast } from './Toast'
 import { buildEscPosTag, printBrowserTag, printBluetooth, printUSB } from '../utils/printUtils'
@@ -17,6 +17,8 @@ export default function ScanStation() {
   const [cameraErr, setCameraErr]   = useState('')
   const [scanFlash, setScanFlash]   = useState(false) // green flash on scan
   const [deliveryMode, setDeliveryMode] = useState(false)
+  const [payAmount, setPayAmount] = useState('')
+  const [paying, setPaying] = useState(false)
   const [mobileResults, setMobileResults] = useState([])
   const [shopName, setShopName] = useState('')
   const [testModal, setTestModal] = useState(false)
@@ -206,6 +208,20 @@ export default function ScanStation() {
     } finally {
       setUpdating(false)
     }
+  }
+
+  async function doPayment() {
+    const amt = parseFloat(payAmount)
+    if (!amt || amt <= 0) { toast('Enter a valid amount', 'danger'); return }
+    setPaying(true)
+    try {
+      const res = await updateOrderPayment(order.id, amt)
+      setOrder(o => ({ ...o, advance: res.advance, balance: res.balance }))
+      setPayAmount('')
+      toast(`₹${amt} received — Balance: ₹${res.balance}`)
+    } catch (e) {
+      toast(e.response?.data?.message || 'Payment update failed', 'danger')
+    } finally { setPaying(false) }
   }
 
   async function printTag(o) {
@@ -407,6 +423,24 @@ export default function ScanStation() {
                     {it.productName} ×{it.qty} · {fmtMoney(it.amount)}
                   </span>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {order.balance > 0 && (
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--gray100)', background: 'var(--red-lt, #fff5f5)' }}>
+              <div style={{ fontSize: 12, color: 'var(--gray400)', marginBottom: 8, fontWeight: 600 }}>COLLECT PAYMENT · Balance ₹{order.balance}</div>
+              <div style={{ display: 'flex', gap: 8, maxWidth: 300 }}>
+                <input
+                  type="number" min="0" placeholder="Amount received (₹)"
+                  value={payAmount}
+                  onChange={e => setPayAmount(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && doPayment()}
+                  style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: '1.5px solid var(--red)', fontSize: 14 }}
+                />
+                <button className="btn btn-primary btn-sm" onClick={doPayment} disabled={paying}>
+                  {paying ? '...' : 'Save'}
+                </button>
               </div>
             </div>
           )}

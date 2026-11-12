@@ -58,6 +58,10 @@ export const getOrders = (params = {}) => api.get('/orders', { params }).then(r 
 export const getOrder = (id) => api.get(`/orders/${id}`).then(r => r.data)
 export const createOrder = (data) => api.post('/orders', data).then(r => r.data)
 export const updateOrderStatus = (id, data) => api.put(`/orders/${id}/status`, data).then(r => r.data)
+export const updateOrderPayment = (id, amount) => api.patch(`/orders/${id}/payment`, { amount }).then(r => r.data)
+
+// ─── CATEGORIES ─────────────────────────────────────────────────────────
+export const getCategories = () => api.get('/categories').then(r => r.data)
 
 // ─── REPORTS ────────────────────────────────────────────────────────────
 export const getSalesReport = (params = {}) => api.get('/reports/sales', { params }).then(r => r.data)
