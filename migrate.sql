@@ -18,6 +18,8 @@ CREATE TABLE service_categories (
     created_at timestamp with time zone NOT NULL
 );
 
+ALTER TABLE customers ALTER COLUMN mobile DROP NOT NULL;
+
 UPDATE customers SET mobile = NULL
 WHERE company_id IS NOT NULL AND mobile IS NOT NULL
   AND id NOT IN (
