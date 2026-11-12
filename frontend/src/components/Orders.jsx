@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getOrders, getOrder, updateOrderStatus, getSettings } from '../api/client'
+import { getOrders, getOrder, updateOrderStatus, getSettings, getCategories } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass, today } from '../utils'
 import Modal from './Modal'
 import { useToast } from './Toast'
@@ -20,10 +20,12 @@ export default function Orders() {
   const [newStatus, setNewStatus] = useState('')
   const [statusNote, setStatusNote] = useState('')
   const [shopName, setShopName] = useState('')
+  const [categories, setCategories] = useState([])
   const toast = useToast()
 
   useEffect(() => {
     getSettings().then(s => setShopName(s.shopName || '')).catch(() => {})
+    getCategories().then(d => setCategories(d.filter(c => c.active))).catch(() => {})
   }, [])
 
   const load = useCallback(() => {
@@ -90,7 +92,7 @@ export default function Orders() {
         </select>
         <select className="filter-select" value={serviceFilter} onChange={e => setServiceFilter(e.target.value)}>
           <option value="">All Services</option>
-          <option>Dry Clean</option><option>Rafu</option><option>Charak</option>
+          {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
       </div>
       <div className="panel">
