@@ -65,6 +65,18 @@ namespace DrycleanApi.Migrations
                     table.PrimaryKey("PK_service_categories", x => x.id);
                 });
 
+            migrationBuilder.Sql("ALTER TABLE customers ALTER COLUMN mobile DROP NOT NULL;");
+
+            migrationBuilder.Sql(@"
+                UPDATE customers SET mobile = NULL
+                WHERE company_id IS NOT NULL AND mobile IS NOT NULL
+                  AND id NOT IN (
+                    SELECT MIN(id) FROM customers
+                    WHERE company_id IS NOT NULL AND mobile IS NOT NULL
+                    GROUP BY company_id, mobile
+                  );
+            ");
+
             migrationBuilder.CreateIndex(
                 name: "IX_customers_company_id_mobile",
                 table: "customers",
@@ -119,4 +131,3 @@ namespace DrycleanApi.Migrations
         }
     }
 }
-
