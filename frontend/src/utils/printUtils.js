@@ -401,37 +401,39 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 <style>
   @page { size: 2in 1in; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
+  html, body {
     font-family: Arial, sans-serif;
     width: 2in; height: 1in;
     overflow: hidden;
-    padding: 2mm 2mm 0 2mm;
   }
+  .wrap { padding: 1.5mm 2mm 0 2mm; width: 2in; height: 1in; overflow: hidden; }
   .header {
-    display: flex; justify-content: space-between; align-items: center;
-    border-bottom: 0.8px solid #000; padding-bottom: 1px; margin-bottom: 2px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 0.8px solid #000; padding-bottom: 1px; margin-bottom: 1.5px;
+    width: 100%;
   }
-  .shop { font-size: 7.5px; color: #555; }
-  .order-id { font-size: 14px; font-weight: 900; letter-spacing: 0.5px; }
-  .row { font-size: 9.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
-  .row-sm { font-size: 8.5px; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-bottom: 1px; }
-  svg { display: block; }
+  .shop { font-size: 7px; color: #555; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+  .order-id { font-size: 13px; font-weight: 900; flex-shrink: 0; margin-left: 4px; }
+  .cust { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+  .info { font-size: 8.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+  svg { display: block; width: 100%; }
 </style>
 </head>
 <body>
-<div class="header">
-  <span class="shop">${shopName}</span>
-  <span class="order-id">${detail.id}</span>
+<div class="wrap">
+  <div class="header">
+    <span class="shop">${shopName}</span>
+    <span class="order-id">${detail.id}</span>
+  </div>
+  <div class="cust">${detail.custName || ''}</div>
+  <div class="info">${detail.mobile || ''} &nbsp;|&nbsp; ${fmtDate(detail.deliveryDate)}</div>
+  ${itemsSummary ? `<div class="info">${itemsSummary}</div>` : ''}
+  <svg id="bc"></svg>
 </div>
-<div class="row">${detail.custName || ''}</div>
-<div class="row-sm">${detail.mobile || ''} &nbsp;|&nbsp; Dlv: ${fmtDate(detail.deliveryDate)}</div>
-${itemsSummary ? `<div class="row-sm">${itemsSummary}</div>` : ''}
-<svg id="bc"></svg>
 <script>
   JsBarcode('#bc', '${barcodeValue}', {
-    format: 'CODE128', width: 1.2, height: 13,
-    displayValue: true, fontSize: 7, margin: 0,
-    textMargin: 1,
+    format: 'CODE128', width: 1.1, height: 12,
+    displayValue: true, fontSize: 7, margin: 0, textMargin: 0,
   });
   window.onload = () => window.print();
 <\/script>
