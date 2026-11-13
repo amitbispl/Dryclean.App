@@ -122,7 +122,7 @@ export default function Billing() {
       .total{background:#000;color:#fff;padding:6px 8px;display:flex;justify-content:space-between;font-weight:700;margin-top:2px}
       hr{border:none;border-top:1px dashed #ccc;margin:5px 0}
       svg{display:block;width:100%}
-      @media print{@page{size:auto;margin:0}}
+      @media print{@page{size:auto;margin:0}body{transform:rotate(180deg);transform-origin:center center}}
     </style>
     </head><body>${bodyHtml}
     ${barcodeInit}
