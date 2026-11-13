@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getOrders, getOrder, getSettings } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass } from '../utils'
 import Modal from './Modal'
-import { buildReceiptData, printBluetooth, printUSB } from '../utils/printUtils'
+import { buildReceiptData, printBluetooth, printUSB, printViaService } from '../utils/printUtils'
 import { loadPrintSettings } from '../utils/printSettings'
 
 export default function Billing() {
@@ -64,6 +64,18 @@ export default function Billing() {
       } catch (e) {
         setPrintStatus('error')
         setPrintError(e.message || 'USB print failed')
+      }
+    } else if (cfg.defaultMode === 'service') {
+      setPrintModal(true)
+      setPrintStatus('printing')
+      setPrintError('')
+      try {
+        const data = await buildReceiptData(detail, fmtDate, fmtMoney, cfg)
+        await printViaService(data, cfg.billPrinterName, cfg.serviceUrl)
+        setPrintStatus('done')
+      } catch (e) {
+        setPrintStatus('error')
+        setPrintError(e.message || 'Print service error')
       }
     } else {
       // normal — open print window directly, no modal needed
@@ -169,6 +181,20 @@ export default function Billing() {
     }
   }
 
+  async function doPrintService() {
+    setPrintStatus('printing')
+    setPrintError('')
+    try {
+      const cfg = { ...printCfg, shopName }
+      const data = await buildReceiptData(detail, fmtDate, fmtMoney, cfg)
+      await printViaService(data, cfg.billPrinterName, cfg.serviceUrl)
+      setPrintStatus('done')
+    } catch (e) {
+      setPrintStatus('error')
+      setPrintError(e.message || 'Print service error')
+    }
+  }
+
   if (loading) return <div className="loading">Loading...</div>
 
   return (
@@ -268,7 +294,7 @@ export default function Billing() {
             <span>Copies: <strong>{printCfg.copies}</strong></span>
             <span>Logo: <strong>{printCfg.showLogo ? 'On' : 'Off'}</strong></span>
             <span style={{ marginLeft: 'auto', color: 'var(--blue)', fontWeight: 600 }}>
-              Default: {printCfg.defaultMode === 'bluetooth' ? 'Bluetooth' : printCfg.defaultMode === 'usb' ? 'USB/OTG' : 'Normal'}
+              Default: {printCfg.defaultMode === 'bluetooth' ? 'Bluetooth' : printCfg.defaultMode === 'usb' ? 'USB/OTG' : printCfg.defaultMode === 'service' ? 'Service' : 'Normal'}
             </span>
           </div>
 
@@ -304,6 +330,18 @@ export default function Billing() {
             <div>
               <div style={{ fontWeight: 700 }}>Bluetooth Thermal Print</div>
               <div style={{ fontSize: 11, color: 'var(--gray400)', marginTop: 2 }}>BLE thermal printer (Chrome on Android / Desktop)</div>
+            </div>
+          </button>
+
+          {/* Service (silent Windows) Print */}
+          <button className="btn btn-outline" style={{ justifyContent: 'flex-start', padding: '12px 16px', textAlign: 'left' }}
+            onClick={doPrintService} disabled={printStatus === 'printing'}>
+            <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, flexShrink: 0, stroke: 'var(--orange)', fill: 'none', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }}>
+              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+            </svg>
+            <div>
+              <div style={{ fontWeight: 700 }}>Silent Print (Service)</div>
+              <div style={{ fontSize: 11, color: 'var(--gray400)', marginTop: 2 }}>Windows printer via local service — no dialog</div>
             </div>
           </button>
 

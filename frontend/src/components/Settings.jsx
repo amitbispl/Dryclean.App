@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getSettings, updateSettings } from '../api/client'
 import { useToast } from './Toast'
 import { loadPrintSettings, savePrintSettings } from '../utils/printSettings'
-import { forgetBluetoothPrinter } from '../utils/printUtils'
+import { forgetBluetoothPrinter, listServicePrinters } from '../utils/printUtils'
 
 export default function Settings() {
   const [form, setForm] = useState({ shopName: '', shopAddress: '', shopCity: '', shopPhone: '', whatsapp: false, barcode: false, sms: false })
@@ -10,6 +10,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [printCfg, setPrintCfg] = useState(() => loadPrintSettings())
   const [printSaved, setPrintSaved] = useState(false)
+  const [servicePrinters, setServicePrinters] = useState([])
   const toast = useToast()
 
   useEffect(() => {
@@ -105,12 +106,34 @@ export default function Settings() {
                 <option value="normal">Normal (browser print dialog)</option>
                 <option value="usb">USB / OTG — silent, no dialog</option>
                 <option value="bluetooth">Bluetooth — silent, no dialog</option>
+                <option value="service">Service — silent, Windows printer</option>
               </select>
               {printCfg.defaultMode === 'bluetooth' && (
                 <button type="button" className="btn btn-sm btn-outline" style={{ marginTop: 6, fontSize: 12 }}
                   onClick={() => { forgetBluetoothPrinter(); window.location.reload() }}>
                   Forget saved printer
                 </button>
+              )}
+              {printCfg.defaultMode === 'service' && (
+                <div style={{ marginTop: 6 }}>
+                  <label style={{ fontSize: 11, color: 'var(--gray500)' }}>Windows Printer Name</label>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                    <select value={printCfg.billPrinterName || ''} onChange={e => setPrint('billPrinterName', e.target.value)} style={{ flex: 1 }}>
+                      <option value="">— select printer —</option>
+                      {servicePrinters.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    <button type="button" className="btn btn-sm btn-outline" style={{ fontSize: 11 }}
+                      onClick={async () => {
+                        try {
+                          const list = await listServicePrinters(printCfg.serviceUrl)
+                          setServicePrinters(list)
+                          if (!list.length) toast('No printers found. Is the print service running?', 'danger')
+                        } catch { toast('Print service not running. Start print-service/start.bat first.', 'danger') }
+                      }}>
+                      Refresh
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
             <div className="form-group">
@@ -130,7 +153,29 @@ export default function Settings() {
                 <option value="normal">Normal (browser print dialog)</option>
                 <option value="usb">USB / OTG — silent, no dialog</option>
                 <option value="bluetooth">Bluetooth — silent, no dialog</option>
+                <option value="service">Service — silent, Windows printer</option>
               </select>
+              {(printCfg.tagMode || 'usb') === 'service' && (
+                <div style={{ marginTop: 6 }}>
+                  <label style={{ fontSize: 11, color: 'var(--gray500)' }}>Windows Printer Name</label>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                    <select value={printCfg.tagPrinterName || ''} onChange={e => setPrint('tagPrinterName', e.target.value)} style={{ flex: 1 }}>
+                      <option value="">— select printer —</option>
+                      {servicePrinters.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    <button type="button" className="btn btn-sm btn-outline" style={{ fontSize: 11 }}
+                      onClick={async () => {
+                        try {
+                          const list = await listServicePrinters(printCfg.serviceUrl)
+                          setServicePrinters(list)
+                          if (!list.length) toast('No printers found. Is the print service running?', 'danger')
+                        } catch { toast('Print service not running. Start print-service/start.bat first.', 'danger') }
+                      }}>
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label>Printer Language</label>

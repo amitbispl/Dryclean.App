@@ -3,7 +3,7 @@ import { getOrders, getOrder, updateOrderStatus, getSettings, getCategories } fr
 import { fmtDate, fmtMoney, statusBadgeClass, today } from '../utils'
 import Modal from './Modal'
 import { useToast } from './Toast'
-import { buildTagData, printBrowserTag, printBluetooth, printUSB } from '../utils/printUtils'
+import { buildTagData, printBrowserTag, printBluetooth, printUSB, printViaService } from '../utils/printUtils'
 import { loadPrintSettings } from '../utils/printSettings'
 
 const STATUS_FLOW = ['Received','Processing','Completed','Packing','Ready','Delivered','Cancelled']
@@ -56,6 +56,9 @@ export default function Orders() {
       } else if (mode === 'usb') {
         const data = await buildTagData(o, fmtDate, settings)
         await printUSB(data)
+      } else if (mode === 'service') {
+        const data = await buildTagData(o, fmtDate, settings)
+        await printViaService(data, cfg.tagPrinterName, cfg.serviceUrl)
       } else {
         printBrowserTag(o, fmtDate, settings)
       }

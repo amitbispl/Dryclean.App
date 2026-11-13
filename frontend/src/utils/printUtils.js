@@ -495,6 +495,27 @@ export async function buildEscPosTag(detail, fmtDate, settings = {}) {
   return new Uint8Array(lines)
 }
 
+// --- Local Print Service (silent, no dialog) ---
+// Sends raw bytes to a local Node.js service running on the user's PC (port 9100).
+// The service uses Windows P/Invoke to print directly — no browser dialog at all.
+export async function printViaService(data, printerName, serviceUrl = 'http://127.0.0.1:9100') {
+  if (!printerName) throw new Error('No printer name set. Configure it in Settings → Printer Name.')
+  const base64 = btoa(String.fromCharCode(...data))
+  const res = await fetch(`${serviceUrl}/print`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ printer: printerName, data: base64 }),
+  })
+  const json = await res.json()
+  if (!json.ok) throw new Error(json.error || 'Print service error')
+}
+
+export async function listServicePrinters(serviceUrl = 'http://127.0.0.1:9100') {
+  const res = await fetch(`${serviceUrl}/printers`)
+  const json = await res.json()
+  return json.printers || []
+}
+
 // Browser print tag — 2" × 1" label size
 export function printBrowserTag(detail, fmtDate, settings = {}) {
   const shopName = settings.shopName || 'WashMitra'

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getOrder, getOrders, updateOrderStatus, getSettings, updateOrderPayment } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass } from '../utils'
 import { useToast } from './Toast'
-import { buildTagData, printBrowserTag, printBluetooth, printUSB } from '../utils/printUtils'
+import { buildTagData, printBrowserTag, printBluetooth, printUSB, printViaService } from '../utils/printUtils'
 import { loadPrintSettings } from '../utils/printSettings'
 
 const STATUS_FLOW = ['Received', 'Processing', 'Completed', 'Packing', 'Ready', 'Delivered', 'Cancelled']
@@ -235,6 +235,9 @@ export default function ScanStation() {
       } else if (mode === 'usb') {
         const data = await buildTagData(o, fmtDate, settings)
         await printUSB(data)
+      } else if (mode === 'service') {
+        const data = await buildTagData(o, fmtDate, settings)
+        await printViaService(data, cfg.tagPrinterName, cfg.serviceUrl)
       } else {
         printBrowserTag(o, fmtDate, settings)
       }

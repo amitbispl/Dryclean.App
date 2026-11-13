@@ -4,7 +4,7 @@ import { getCustomers, getProducts, createOrder, createCustomer, getCategories }
 import { today, fmtDate, fmtMoney } from '../utils'
 import { useToast } from './Toast'
 import { loadPrintSettings } from '../utils/printSettings'
-import { buildReceiptData, printBluetooth, printUSB } from '../utils/printUtils'
+import { buildReceiptData, printBluetooth, printUSB, printViaService } from '../utils/printUtils'
 
 export default function NewOrder() {
   const navigate = useNavigate()
@@ -119,6 +119,9 @@ export default function NewOrder() {
       } else if (cfg.defaultMode === 'usb') {
         const data = await buildReceiptData(detail, fmtDate, fmtMoney, cfg)
         await printUSB(data)
+      } else if (cfg.defaultMode === 'service') {
+        const data = await buildReceiptData(detail, fmtDate, fmtMoney, cfg)
+        await printViaService(data, cfg.billPrinterName, cfg.serviceUrl)
       } else {
         // Normal browser print
         const { paperSize, showLogo, footerText, copies } = cfg
