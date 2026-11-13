@@ -411,10 +411,10 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     display: flex; justify-content: space-between; align-items: baseline;
     border-bottom: 0.5px solid #000; padding-bottom: 1px; margin-bottom: 2px;
   }
-  .shop { font-size: 7px; color: #555; }
-  .order-id { font-size: 11px; font-weight: 900; letter-spacing: 0.5px; }
-  .info { font-size: 7px; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .items { font-size: 6.5px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+  .shop { font-size: 8px; color: #555; }
+  .order-id { font-size: 13px; font-weight: 900; letter-spacing: 0.5px; }
+  .info { font-size: 9px; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .items { font-size: 8px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
   svg { display: block; }
 </style>
 </head>
@@ -428,7 +428,7 @@ ${itemsSummary ? `<div class="items">${itemsSummary}</div>` : ''}
 <svg id="bc"></svg>
 <script>
   JsBarcode('#bc', '${barcodeValue}', {
-    format: 'CODE128', width: 1.2, height: 18,
+    format: 'CODE128', width: 1.2, height: 14,
     displayValue: true, fontSize: 7, margin: 1,
     textMargin: 1,
   });
