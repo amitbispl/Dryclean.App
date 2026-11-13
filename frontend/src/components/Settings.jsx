@@ -89,6 +89,8 @@ export default function Settings() {
       <div className="settings-section">
         <h3>Print Settings</h3>
         <div className="form-grid">
+
+          <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: 'var(--gray500)' }}>Bill / Receipt Printer</p>
           <div className="form-row">
             <div className="form-group">
               <label>Paper Size</label>
@@ -98,37 +100,48 @@ export default function Settings() {
               </select>
             </div>
             <div className="form-group">
-              <label>Default Print Mode</label>
+              <label>Print Mode</label>
               <select value={printCfg.defaultMode} onChange={e => setPrint('defaultMode', e.target.value)}>
-                <option value="normal">Normal (browser / desktop printer)</option>
-                <option value="usb">USB / OTG Thermal</option>
-                <option value="bluetooth">Bluetooth Thermal</option>
+                <option value="normal">Normal (browser print dialog)</option>
+                <option value="usb">USB / OTG — silent, no dialog</option>
+                <option value="bluetooth">Bluetooth — silent, no dialog</option>
               </select>
               {printCfg.defaultMode === 'bluetooth' && (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline"
-                  style={{ marginTop: 6, fontSize: 12 }}
-                  onClick={() => { forgetBluetoothPrinter(); window.location.reload() }}
-                >
-                  Forget saved printer (pick new one on next print)
+                <button type="button" className="btn btn-sm btn-outline" style={{ marginTop: 6, fontSize: 12 }}
+                  onClick={() => { forgetBluetoothPrinter(); window.location.reload() }}>
+                  Forget saved printer
                 </button>
               )}
             </div>
             <div className="form-group">
               <label>Printer Language</label>
               <select value={printCfg.printerLanguage || 'escpos'} onChange={e => setPrint('printerLanguage', e.target.value)}>
-                <option value="escpos">ESC/POS (most thermal printers)</option>
-                <option value="cpcl">CPCL / Label mode (DCode MP30, Zebra)</option>
+                <option value="escpos">ESC/POS (standard thermal)</option>
+                <option value="cpcl">CPCL (DCode MP30, Zebra)</option>
               </select>
-              <small style={{ color: 'var(--gray400)', fontSize: 11 }}>
-                {(printCfg.printerLanguage || 'escpos') === 'cpcl'
-                  ? 'Use CPCL for printers showing "Parser Mode: LABEL" in their info print.'
-                  : 'Use ESC/POS for standard thermal receipt printers.'}
-              </small>
             </div>
           </div>
+
+          <p style={{ fontWeight: 600, fontSize: 13, margin: '12px 0 4px', color: 'var(--gray500)' }}>Label / Tag Printer</p>
           <div className="form-row">
+            <div className="form-group">
+              <label>Print Mode</label>
+              <select value={printCfg.tagMode || 'usb'} onChange={e => setPrint('tagMode', e.target.value)}>
+                <option value="normal">Normal (browser print dialog)</option>
+                <option value="usb">USB / OTG — silent, no dialog</option>
+                <option value="bluetooth">Bluetooth — silent, no dialog</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Printer Language</label>
+              <select value={printCfg.tagLanguage || 'escpos'} onChange={e => setPrint('tagLanguage', e.target.value)}>
+                <option value="escpos">ESC/POS (standard thermal)</option>
+                <option value="cpcl">CPCL (DCode MP30, Zebra)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row" style={{ marginTop: 8 }}>
             <div className="form-group">
               <label>Number of Copies</label>
               <select value={printCfg.copies} onChange={e => setPrint('copies', e.target.value)}>

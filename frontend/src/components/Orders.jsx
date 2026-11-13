@@ -46,12 +46,14 @@ export default function Orders() {
   }
 
   async function printTag(o) {
-    const settings = { ...loadPrintSettings(), shopName }
+    const cfg = loadPrintSettings()
+    const mode = cfg.tagMode || cfg.defaultMode
+    const settings = { ...cfg, printerLanguage: cfg.tagLanguage || cfg.printerLanguage, shopName }
     try {
-      if (settings.defaultMode === 'bluetooth') {
+      if (mode === 'bluetooth') {
         const data = await buildTagData(o, fmtDate, settings)
         await printBluetooth(data)
-      } else if (settings.defaultMode === 'usb') {
+      } else if (mode === 'usb') {
         const data = await buildTagData(o, fmtDate, settings)
         await printUSB(data)
       } else {
