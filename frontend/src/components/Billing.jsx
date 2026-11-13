@@ -115,13 +115,14 @@ export default function Billing() {
     ` : ''
     w.document.write(`<html><head><title>Invoice ${detail.id}</title>
     <style>
-      body{font-family:Arial;max-width:${pageW};margin:0 auto;font-size:12px}
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Arial;width:100%;padding:3mm 3mm 0 3mm;font-size:12px}
       h2{text-align:center;font-size:16px;margin:4px 0 2px}
       .row{display:flex;justify-content:space-between;padding:2px 0}
       .total{background:#000;color:#fff;padding:6px 8px;display:flex;justify-content:space-between;font-weight:700;margin-top:2px}
       hr{border:none;border-top:1px dashed #ccc;margin:5px 0}
       svg{display:block;width:100%}
-      @media print{@page{size:${pageW} auto;margin:3mm 3mm 0 3mm}}
+      @media print{@page{size:auto;margin:0}}
     </style>
     </head><body>${bodyHtml}
     ${barcodeInit}
