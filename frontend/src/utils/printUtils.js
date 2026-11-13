@@ -243,31 +243,25 @@ export function buildCpclReceipt(detail, fmtDate, fmtMoney, settings = {}) {
   return new TextEncoder().encode([header, ...lines, 'PRINT'].join('\r\n') + '\r\n')
 }
 
-// CPCL Tag (packing label for DCode MP30 in LABEL mode)
-// 2" wide = 400 dots at 200 DPI
+// CPCL Tag — compact layout for 2"×1" labels (200 dots tall at 200 DPI)
+// Layout: shop(small) | order-id(large) | cust+delivery(small) | barcode(small)
 export function buildCpclTag(detail, fmtDate, settings = {}) {
   const shopName = sanitize(settings.shopName || 'WashMitra')
 
   const lines = []
-  let y = 10
+  let y = 2
 
-  const t = (font, x, text) => { lines.push(`TEXT ${font} 0 ${x} ${y} ${sanitize(text)}`); y += font >= 4 ? 44 : font === 3 ? 36 : 28 }
-  const sep = () => { lines.push(`LINE 0 ${y} 380 ${y} 2`); y += 10 }
+  // font 2 ≈ 20px, font 3 ≈ 28px at 200 DPI
+  const t = (font, x, text) => { lines.push(`TEXT ${font} 0 ${x} ${y} ${sanitize(text)}`); y += font === 3 ? 32 : font === 2 ? 24 : 20 }
 
-  t(2, 0, shopName)
-  sep()
-  t(4, 0, detail.id || '')
-  sep()
-  t(3, 0, detail.custName || '')
-  if (detail.mobile) t(2, 0, detail.mobile)
-  t(2, 0, 'Delivery: ' + fmtDate(detail.deliveryDate))
-  if ((detail.items || []).length > 0) {
-    sep()
-    detail.items.forEach(it => t(2, 0, `${sanitize(it.productName)} x${it.qty}`))
-  }
-  sep()
-  lines.push(`BARCODE 128 1 1 60 10 ${y} ${sanitize(detail.id || '')}`)
-  y += 70
+  t(1, 0, shopName)                                               // ~20 dots → y=22
+  t(3, 0, detail.id || '')                                        // ~32 dots → y=54
+  t(2, 0, sanitize(detail.custName || ''))                        // ~24 dots → y=78
+  // mobile + delivery on one line to save height
+  const info = [detail.mobile, fmtDate(detail.deliveryDate)].filter(Boolean).join('  ')
+  t(1, 0, info)                                                   // ~20 dots → y=98
+  lines.push(`BARCODE 128 1 1 50 0 ${y} ${sanitize(detail.id || '')}`)
+  y += 60                                                         // → y=158, fits in 200
 
   const header = `! 0 200 200 ${y} 1`
   return new TextEncoder().encode([header, ...lines, 'PRINT'].join('\r\n') + '\r\n')
