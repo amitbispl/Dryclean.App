@@ -78,9 +78,9 @@ export default function Billing() {
     const pageW = paperSize === '58' ? '58mm' : '80mm'
     const logoHtml = showLogo ? `<div style="text-align:center"><img src="/logo.jpg" style="height:40px;object-fit:contain" /></div>` : ''
     const copyCount = Math.max(1, Math.min(3, Number(copies) || 1))
-    const barcodeVal  = detail.mobile ? `${detail.id}-${detail.mobile}` : detail.id
+    const barcodeVal  = detail.id
     const barcodeHtml = showBarcode !== false
-      ? `<div style="text-align:center;margin:8px 0"><svg class="barcode-${detail.id}"></svg></div>` : ''
+      ? `<div style="text-align:center;margin:4px 0 2px"><svg class="barcode-sv"></svg></div>` : ''
 
     let bodyHtml = ''
     for (let c = 0; c < copyCount; c++) {
@@ -93,34 +93,35 @@ export default function Billing() {
         <div class="row"><span>Invoice No:</span><strong>${detail.id}</strong></div>
         <div class="row"><span>Date:</span><span>${fmtDate(detail.entryDate)}</span></div>
         <div class="row"><span>Customer:</span><span>${detail.custName}</span></div>
-        <div class="row"><span>Mobile:</span><span>${detail.mobile}</span></div>
+        <div class="row"><span>Mobile:</span><span>${detail.mobile || ''}</span></div>
         <div class="row"><span>Delivery:</span><span>${fmtDate(detail.deliveryDate)}</span></div>
-        <hr>
-        ${(detail.items || []).map(i => `<div class="row"><span>${i.productName} \xd7${i.qty}</span><span>₹${i.amount}</span></div>`).join('')}
-        <hr>
-        <div class="row"><span>Booking Amt:</span><strong>₹${detail.total}</strong></div>
-        ${detail.discount > 0 ? `<div class="row"><span>Discount:</span><span>-₹${detail.discount}</span></div>` : ''}
-        <div class="row"><span>Received:</span><span>₹${detail.advance}</span></div>
-        <div class="total"><span>Balance Due:</span><span>₹${detail.balance}</span></div>
-        <p style="text-align:center;margin-top:10px;font-size:11px">Payment: ${detail.payMode}</p>
         ${barcodeHtml}
-        <p style="text-align:center;font-size:10px">${footerText}</p>
+        <hr>
+        ${(detail.items || []).map(i => `<div class="row"><span>${i.productName} \xd7${i.qty}</span><span>Rs.${i.amount}</span></div>`).join('')}
+        <hr>
+        <div class="row"><span>Booking Amt:</span><strong>Rs.${detail.total}</strong></div>
+        ${detail.discount > 0 ? `<div class="row"><span>Discount:</span><span>-Rs.${detail.discount}</span></div>` : ''}
+        <div class="row"><span>Received:</span><span>Rs.${detail.advance}</span></div>
+        <div class="total"><span>Balance Due:</span><span>Rs.${detail.balance}</span></div>
+        <p style="text-align:center;margin-top:6px;font-size:11px">Payment: ${detail.payMode || ''}</p>
+        <p style="text-align:center;font-size:10px;margin-top:4px">${footerText}</p>
       </div>`
     }
 
     const w = window.open('', '_blank')
     const barcodeInit = showBarcode !== false ? `
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
-      <script>JsBarcode(".barcode-${detail.id}", "${barcodeVal}", {format:"CODE128",width:1.5,height:40,displayValue:true,fontSize:10,margin:4});<\/script>
+      <script>JsBarcode(".barcode-sv", "${barcodeVal}", {format:"CODE128",width:1.5,height:36,displayValue:true,fontSize:9,margin:2});<\/script>
     ` : ''
     w.document.write(`<html><head><title>Invoice ${detail.id}</title>
     <style>
-      body{font-family:Arial;max-width:${pageW};margin:10px auto;font-size:12px}
-      h2{text-align:center;font-size:16px}
-      .row{display:flex;justify-content:space-between;padding:3px 0}
-      .total{background:#000;color:#fff;padding:8px;display:flex;justify-content:space-between;font-weight:700}
-      hr{border:none;border-top:1px dashed #ccc;margin:8px 0}
-      @media print{@page{size:${pageW} auto;margin:4mm}}
+      body{font-family:Arial;max-width:${pageW};margin:0 auto;font-size:12px}
+      h2{text-align:center;font-size:16px;margin:4px 0 2px}
+      .row{display:flex;justify-content:space-between;padding:2px 0}
+      .total{background:#000;color:#fff;padding:6px 8px;display:flex;justify-content:space-between;font-weight:700;margin-top:2px}
+      hr{border:none;border-top:1px dashed #ccc;margin:5px 0}
+      svg{display:block;width:100%}
+      @media print{@page{size:${pageW} auto;margin:3mm 3mm 0 3mm}}
     </style>
     </head><body>${bodyHtml}
     ${barcodeInit}
