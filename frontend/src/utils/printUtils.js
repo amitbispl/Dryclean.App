@@ -412,10 +412,10 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     border-bottom: 0.8px solid #000; padding-bottom: 1px; margin-bottom: 1.5px;
     width: 100%;
   }
-  .shop { font-size: 7px; color: #555; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
-  .order-id { font-size: 13px; font-weight: 900; flex-shrink: 0; margin-left: 4px; }
-  .cust { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-  .info { font-size: 8.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+  .shop { font-size: 8px; color: #555; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+  .order-id { font-size: 15px; font-weight: 900; flex-shrink: 0; margin-left: 4px; }
+  .cust { font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  .info { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
   svg { display: block; width: 100%; }
 </style>
 </head>
