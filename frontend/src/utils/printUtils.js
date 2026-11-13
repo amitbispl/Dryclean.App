@@ -276,17 +276,17 @@ export async function printBluetooth(data) {
 }
 
 async function sendBleData(characteristic, data) {
-  // Use writeValueWithoutResponse when available — required by many thermal printers
   const useNoResp = characteristic.properties.writeWithoutResponse
-  const CHUNK = useNoResp ? 512 : 200
+  // BLE default MTU = 23 bytes; usable payload = 20. Use 20 to be safe on all printers.
+  const CHUNK = 20
   for (let i = 0; i < data.length; i += CHUNK) {
     const chunk = data.slice(i, i + CHUNK)
     if (useNoResp) {
       await characteristic.writeValueWithoutResponse(chunk)
-      // Small delay to avoid buffer overflow on printer
-      await new Promise(r => setTimeout(r, 20))
+      await new Promise(r => setTimeout(r, 30))
     } else {
       await characteristic.writeValue(chunk)
+      await new Promise(r => setTimeout(r, 10))
     }
   }
 }
