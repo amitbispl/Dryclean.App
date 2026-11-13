@@ -85,7 +85,7 @@ export default function Billing() {
     let bodyHtml = ''
     for (let c = 0; c < copyCount; c++) {
       bodyHtml += `
-      <div class="copy" style="${c > 0 ? 'page-break-before:always' : ''}">
+      <div class="copy" style="${c > 0 ? 'border-top:2px dashed #000;margin-top:10px;padding-top:8px' : ''}">
         ${logoHtml}
         <h2>${displayName}</h2>
         <p style="text-align:center;font-size:11px">Tax Invoice</p>
@@ -111,7 +111,7 @@ export default function Billing() {
     const w = window.open('', '_blank')
     const barcodeInit = showBarcode !== false ? `
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
-      <script>JsBarcode(".barcode-sv", "${barcodeVal}", {format:"CODE128",width:1.5,height:36,displayValue:true,fontSize:9,margin:2});<\/script>
+      <script>document.querySelectorAll(".barcode-sv").forEach(el=>JsBarcode(el,"${barcodeVal}",{format:"CODE128",width:1.5,height:36,displayValue:true,fontSize:9,margin:2}));<\/script>
     ` : ''
     w.document.write(`<html><head><title>Invoice ${detail.id}</title>
     <style>
