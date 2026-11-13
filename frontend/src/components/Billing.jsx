@@ -122,11 +122,22 @@ export default function Billing() {
       .total{background:#000;color:#fff;padding:6px 8px;display:flex;justify-content:space-between;font-weight:700;margin-top:2px}
       hr{border:none;border-top:1px dashed #ccc;margin:5px 0}
       svg{display:block;width:100%}
-      @media print{@page{size:auto;margin:0}body{transform:rotate(180deg);transform-origin:center center}}
+      @media print{
+        @page{size:auto;margin:0}
+        html,body{margin:0;padding:0;overflow:hidden}
+        body{padding:3mm 3mm 0 3mm;transform:rotate(180deg);transform-origin:50% 50%}
+        .copy:last-child p:last-child{margin-bottom:0;padding-bottom:0}
+      }
     </style>
     </head><body>${bodyHtml}
     ${barcodeInit}
-    <script>window.addEventListener('load',()=>{window.print();window.close();});<\/script></body></html>`)
+    <script>
+      window.addEventListener('load', () => {
+        const h = document.body.scrollHeight;
+        document.body.style.height = h + 'px';
+        setTimeout(() => { window.print(); window.close(); }, 300);
+      });
+    <\/script></body></html>`)
     setPrintModal(false)
   }
 
