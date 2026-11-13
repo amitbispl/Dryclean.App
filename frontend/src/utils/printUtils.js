@@ -405,16 +405,16 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     font-family: Arial, sans-serif;
     width: 2in; height: 1in;
     overflow: hidden;
-    padding: 2mm 2mm 1mm 2mm;
+    padding: 2mm 2mm 0 2mm;
   }
   .header {
-    display: flex; justify-content: space-between; align-items: baseline;
-    border-bottom: 0.5px solid #000; padding-bottom: 1px; margin-bottom: 2px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 0.8px solid #000; padding-bottom: 1px; margin-bottom: 2px;
   }
-  .shop { font-size: 8px; color: #555; }
-  .order-id { font-size: 13px; font-weight: 900; letter-spacing: 0.5px; }
-  .info { font-size: 9px; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .items { font-size: 8px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+  .shop { font-size: 7.5px; color: #555; }
+  .order-id { font-size: 14px; font-weight: 900; letter-spacing: 0.5px; }
+  .row { font-size: 9.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  .row-sm { font-size: 8.5px; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; margin-bottom: 1px; }
   svg { display: block; }
 </style>
 </head>
@@ -423,13 +423,14 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
   <span class="shop">${shopName}</span>
   <span class="order-id">${detail.id}</span>
 </div>
-<div class="info">${detail.custName || ''} &nbsp;|&nbsp; ${detail.mobile || ''} &nbsp;|&nbsp; ${fmtDate(detail.deliveryDate)}</div>
-${itemsSummary ? `<div class="items">${itemsSummary}</div>` : ''}
+<div class="row">${detail.custName || ''}</div>
+<div class="row-sm">${detail.mobile || ''} &nbsp;|&nbsp; Dlv: ${fmtDate(detail.deliveryDate)}</div>
+${itemsSummary ? `<div class="row-sm">${itemsSummary}</div>` : ''}
 <svg id="bc"></svg>
 <script>
   JsBarcode('#bc', '${barcodeValue}', {
-    format: 'CODE128', width: 1.2, height: 14,
-    displayValue: true, fontSize: 7, margin: 1,
+    format: 'CODE128', width: 1.2, height: 13,
+    displayValue: true, fontSize: 7, margin: 0,
     textMargin: 1,
   });
   window.onload = () => window.print();
