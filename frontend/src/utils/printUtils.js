@@ -214,27 +214,39 @@ const BLE_SERVICES = [
   { service: '49535343-fe7d-4ae5-8fa9-9fafd205e455', char: '49535343-8841-43f4-a8d4-ecbe34729bb3' },
 ]
 
-let _ble = null  // { device, characteristic }
+let _ble = null
+let _printing = false
 
 export function forgetBluetoothPrinter() {
   if (_ble) { try { _ble.device.gatt.disconnect() } catch {} }
   _ble = null
+  _printing = false
 }
 
 export async function printBluetooth(data) {
-  if (!navigator.bluetooth) {
-    throw new Error('Web Bluetooth is not supported. Use Chrome on Desktop/Android.')
+  if (!navigator.bluetooth) throw new Error('Web Bluetooth not supported. Use Chrome.')
+  if (_printing) throw new Error('Print already in progress — please wait.')
+  _printing = true
+  try {
+    await _doPrint(data)
+  } finally {
+    _printing = false
   }
+}
 
+async function _doPrint(data) {
   const optionalServices = BLE_SERVICES.map(s => s.service)
 
+  // Try cached connection first
   if (_ble && _ble.device.gatt.connected) {
     try { await sendBleData(_ble.characteristic, data); return }
-    catch { _ble = null }
+    catch { _ble = null }  // stale — fall through to reconnect
   }
 
   const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices })
   const server = await device.gatt.connect()
+  // Small settle time after connect
+  await new Promise(r => setTimeout(r, 300))
 
   let characteristic = null
 
@@ -266,7 +278,7 @@ export async function printBluetooth(data) {
 
   if (!characteristic) {
     device.gatt.disconnect()
-    throw new Error('No writable characteristic found on this printer. Try USB mode instead.')
+    throw new Error('No writable characteristic found. Try USB mode instead.')
   }
 
   _ble = { device, characteristic }
@@ -283,10 +295,10 @@ async function sendBleData(characteristic, data) {
     const chunk = data.slice(i, i + CHUNK)
     if (useNoResp) {
       await characteristic.writeValueWithoutResponse(chunk)
-      await new Promise(r => setTimeout(r, 30))
+      await new Promise(r => setTimeout(r, 50))
     } else {
       await characteristic.writeValue(chunk)
-      await new Promise(r => setTimeout(r, 10))
+      await new Promise(r => setTimeout(r, 50))
     }
   }
 }
