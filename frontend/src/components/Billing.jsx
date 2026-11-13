@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getOrders, getOrder, getSettings } from '../api/client'
 import { fmtDate, fmtMoney, statusBadgeClass } from '../utils'
 import Modal from './Modal'
-import { buildEscPosReceipt, printBluetooth, printUSB } from '../utils/printUtils'
+import { buildReceiptData, printBluetooth, printUSB } from '../utils/printUtils'
 import { loadPrintSettings } from '../utils/printSettings'
 
 export default function Billing() {
@@ -46,7 +46,7 @@ export default function Billing() {
       setPrintStatus('printing')
       setPrintError('')
       try {
-        const data = await buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        const data = await buildReceiptData(detail, fmtDate, fmtMoney, cfg)
         await printBluetooth(data)
         setPrintStatus('done')
       } catch (e) {
@@ -58,7 +58,7 @@ export default function Billing() {
       setPrintStatus('printing')
       setPrintError('')
       try {
-        const data = await buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        const data = await buildReceiptData(detail, fmtDate, fmtMoney, cfg)
         await printUSB(data)
         setPrintStatus('done')
       } catch (e) {
@@ -134,7 +134,7 @@ export default function Billing() {
     setPrintStatus('printing')
     setPrintError('')
     try {
-      const data = await buildEscPosReceipt(detail, fmtDate, fmtMoney, { ...printCfg, shopName })
+      const data = await buildReceiptData(detail, fmtDate, fmtMoney, { ...printCfg, shopName })
       await printBluetooth(data)
       setPrintStatus('done')
     } catch (e) {
@@ -147,7 +147,7 @@ export default function Billing() {
     setPrintStatus('printing')
     setPrintError('')
     try {
-      const data = await buildEscPosReceipt(detail, fmtDate, fmtMoney, { ...printCfg, shopName })
+      const data = await buildReceiptData(detail, fmtDate, fmtMoney, { ...printCfg, shopName })
       await printUSB(data)
       setPrintStatus('done')
     } catch (e) {

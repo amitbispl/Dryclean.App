@@ -4,7 +4,7 @@ import { getCustomers, getProducts, createOrder, createCustomer, getCategories }
 import { today, fmtDate, fmtMoney } from '../utils'
 import { useToast } from './Toast'
 import { loadPrintSettings } from '../utils/printSettings'
-import { buildEscPosReceipt, printBluetooth, printUSB } from '../utils/printUtils'
+import { buildReceiptData, printBluetooth, printUSB } from '../utils/printUtils'
 
 export default function NewOrder() {
   const navigate = useNavigate()
@@ -114,10 +114,10 @@ export default function NewOrder() {
 
     try {
       if (cfg.defaultMode === 'bluetooth') {
-        const data = await buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        const data = await buildReceiptData(detail, fmtDate, fmtMoney, cfg)
         await printBluetooth(data)
       } else if (cfg.defaultMode === 'usb') {
-        const data = await buildEscPosReceipt(detail, fmtDate, fmtMoney, cfg)
+        const data = await buildReceiptData(detail, fmtDate, fmtMoney, cfg)
         await printUSB(data)
       } else {
         // Normal browser print

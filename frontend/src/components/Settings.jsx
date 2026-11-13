@@ -115,6 +115,18 @@ export default function Settings() {
                 </button>
               )}
             </div>
+            <div className="form-group">
+              <label>Printer Language</label>
+              <select value={printCfg.printerLanguage || 'escpos'} onChange={e => setPrint('printerLanguage', e.target.value)}>
+                <option value="escpos">ESC/POS (most thermal printers)</option>
+                <option value="cpcl">CPCL / Label mode (DCode MP30, Zebra)</option>
+              </select>
+              <small style={{ color: 'var(--gray400)', fontSize: 11 }}>
+                {(printCfg.printerLanguage || 'escpos') === 'cpcl'
+                  ? 'Use CPCL for printers showing "Parser Mode: LABEL" in their info print.'
+                  : 'Use ESC/POS for standard thermal receipt printers.'}
+              </small>
+            </div>
           </div>
           <div className="form-row">
             <div className="form-group">

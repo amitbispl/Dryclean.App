@@ -3,6 +3,7 @@ const KEY = 'washmitra_print_settings'
 export const DEFAULT_PRINT_SETTINGS = {
   paperSize: '80',          // '58' | '80' mm
   defaultMode: 'normal',    // 'normal' | 'usb' | 'bluetooth'
+  printerLanguage: 'escpos', // 'escpos' | 'cpcl'  — use 'cpcl' for DCode MP30 / label printers
   copies: '1',              // '1' | '2' | '3'
   showLogo: true,
   footerText: 'Thank you! Visit again!',

@@ -200,6 +200,123 @@ export async function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {
   return new Uint8Array(all)
 }
 
+// ── CPCL Receipt (for label printers in LABEL/CPCL mode e.g. DCode DC MP30) ──
+// DPI: 200, label width: ~560 dots (2.8"), variable height
+export function buildCpclReceipt(detail, fmtDate, fmtMoney, settings = {}) {
+  const shopName = sanitize(settings.shopName || 'WashMitra')
+  const footerText = sanitize(settings.footerText || 'Thank you! Visit again!')
+  const W = 560   // printable dots at 200dpi on 2.83" label
+
+  const rows = []
+  let y = 10
+
+  const addText = (text, font = 2, bold = false, cx = false) => {
+    const t = sanitize(text)
+    const prefix = bold ? 'SETBOLD 1\r\n' : ''
+    const suffix = bold ? 'SETBOLD 0\r\n' : ''
+    const align = cx ? `CENTER\r\n` : `LEFT\r\n`
+    rows.push(`${align}${prefix}TEXT ${font} 0 10 ${y} ${t}\r\n${suffix}LEFT\r\n`)
+    y += font === 3 ? 36 : font === 2 ? 28 : 24
+  }
+
+  const addLine = () => {
+    rows.push(`LINE 10 ${y} ${W - 10} ${y} 2\r\n`)
+    y += 8
+  }
+
+  const addTwoCol = (left, right) => {
+    rows.push(`LEFT\r\nTEXT 2 0 10 ${y} ${sanitize(left)}\r\n`)
+    rows.push(`RIGHT\r\nTEXT 2 0 10 ${y} ${sanitize(right)}\r\n`)
+    rows.push(`LEFT\r\n`)
+    y += 28
+  }
+
+  // Header
+  addText(shopName, 3, true, true)
+  addText('Tax Invoice', 2, false, true)
+  addLine()
+
+  // Order info
+  addTwoCol('Invoice:', detail.id)
+  addTwoCol('Date:', fmtDate(detail.entryDate))
+  addTwoCol('Customer:', sanitize(detail.custName || ''))
+  addTwoCol('Mobile:', sanitize(detail.mobile || ''))
+  addTwoCol('Delivery:', fmtDate(detail.deliveryDate))
+  addLine()
+
+  // Items
+  ;(detail.items || []).forEach(it => {
+    addTwoCol(`${sanitize(it.productName)} x${it.qty}`, fmtMoney(it.amount))
+  })
+  addLine()
+
+  // Totals
+  addTwoCol('Booking Amt:', fmtMoney(detail.total))
+  if (detail.discount > 0) addTwoCol('Discount:', '-' + fmtMoney(detail.discount))
+  addTwoCol('Received:', fmtMoney(detail.advance))
+  addLine()
+  addText(`Balance Due: ${fmtMoney(detail.balance)}`, 3, true)
+  addLine()
+  addText('Payment: ' + sanitize(detail.payMode || ''), 2)
+
+  y += 10
+  addText(footerText, 2, false, true)
+  y += 20
+
+  const header = `! 0 200 200 ${y} 1\r\n`
+  const body = rows.join('')
+  const footer = `PRINT\r\n`
+  return new TextEncoder().encode(header + body + footer)
+}
+
+// CPCL Tag (packing label for DCode MP30 in LABEL mode)
+export function buildCpclTag(detail, fmtDate, settings = {}) {
+  const shopName = sanitize(settings.shopName || 'WashMitra')
+  const W = 560
+  const rows = []
+  let y = 10
+
+  const addText = (text, font = 2, bold = false, cx = false) => {
+    const t = sanitize(text)
+    const prefix = bold ? 'SETBOLD 1\r\n' : ''
+    const suffix = bold ? 'SETBOLD 0\r\n' : ''
+    const align = cx ? 'CENTER\r\n' : 'LEFT\r\n'
+    rows.push(`${align}${prefix}TEXT ${font} 0 10 ${y} ${t}\r\n${suffix}LEFT\r\n`)
+    y += font === 4 ? 44 : font === 3 ? 36 : 28
+  }
+  const addLine = () => { rows.push(`LINE 10 ${y} ${W - 10} ${y} 2\r\n`); y += 8 }
+
+  addText(shopName, 2, false, true)
+  addLine()
+  addText(detail.id || '', 4, true, true)
+  addLine()
+  addText(sanitize(detail.custName || ''), 3, true)
+  addText(sanitize(detail.mobile || ''), 2)
+  addText(`Delivery: ${fmtDate(detail.deliveryDate)}`, 2)
+  if ((detail.items || []).length > 0) {
+    addLine()
+    detail.items.forEach(it => addText(`${sanitize(it.productName)} x${it.qty}`, 2))
+  }
+  addLine()
+  // Barcode
+  rows.push(`CENTER\r\nBARCODE 128 1 1 60 10 ${y} ${sanitize(detail.id || '')}\r\nLEFT\r\n`)
+  y += 70
+
+  const header = `! 0 200 200 ${y} 1\r\n`
+  return new TextEncoder().encode(header + rows.join('') + 'PRINT\r\n')
+}
+
+// Auto-select ESC/POS or CPCL based on settings.printerLanguage
+export async function buildReceiptData(detail, fmtDate, fmtMoney, settings = {}) {
+  if (settings.printerLanguage === 'cpcl') return buildCpclReceipt(detail, fmtDate, fmtMoney, settings)
+  return buildEscPosReceipt(detail, fmtDate, fmtMoney, settings)
+}
+
+export async function buildTagData(detail, fmtDate, settings = {}) {
+  if (settings.printerLanguage === 'cpcl') return buildCpclTag(detail, fmtDate, settings)
+  return buildEscPosTag(detail, fmtDate, settings)
+}
+
 // --- Bluetooth Thermal Print ---
 // Known service/characteristic pairs for common thermal printers
 const BLE_SERVICES = [
