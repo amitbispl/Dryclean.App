@@ -201,61 +201,74 @@ export async function buildEscPosReceipt(detail, fmtDate, fmtMoney, settings = {
 }
 
 // --- Bluetooth Thermal Print ---
-// Supports XPrinter BLE and common generic BLE thermal printers
+// Known service/characteristic pairs for common thermal printers
 const BLE_SERVICES = [
+  // DCode MP30 / generic Chinese BT thermal (0xff00 family)
+  { service: '0000ff00-0000-1000-8000-00805f9b34fb', char: '0000ff02-0000-1000-8000-00805f9b34fb' },
+  { service: '0000ff00-0000-1000-8000-00805f9b34fb', char: '0000ff01-0000-1000-8000-00805f9b34fb' },
+  // Generic / GZM8006 / BT-8006 family
   { service: '000018f0-0000-1000-8000-00805f9b34fb', char: '00002af1-0000-1000-8000-00805f9b34fb' },
+  // XPrinter
   { service: 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', char: 'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f' },
+  // Rongta / HPRT
   { service: '49535343-fe7d-4ae5-8fa9-9fafd205e455', char: '49535343-8841-43f4-a8d4-ecbe34729bb3' },
 ]
 
-// Module-level BLE cache — keeps the connection alive across multiple prints
-// in the same browser tab so the picker only appears once per session.
 let _ble = null  // { device, characteristic }
 
 export function forgetBluetoothPrinter() {
   if (_ble) { try { _ble.device.gatt.disconnect() } catch {} }
   _ble = null
-  localStorage.removeItem('washmitra_bt_printer_id')
 }
 
 export async function printBluetooth(data) {
   if (!navigator.bluetooth) {
-    throw new Error('Web Bluetooth is not supported in this browser. Use Chrome on Android/Desktop.')
+    throw new Error('Web Bluetooth is not supported. Use Chrome on Desktop/Android.')
   }
 
   const optionalServices = BLE_SERVICES.map(s => s.service)
 
-  // Reuse cached connection from this tab session — no picker on subsequent prints
   if (_ble && _ble.device.gatt.connected) {
-    try {
-      await sendBleData(_ble.characteristic, data)
-      return
-    } catch {
-      _ble = null  // connection dropped, fall through to reconnect
-    }
+    try { await sendBleData(_ble.characteristic, data); return }
+    catch { _ble = null }
   }
 
-  // Show picker (first print this session, or after connection dropped)
   const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices })
   const server = await device.gatt.connect()
 
   let characteristic = null
+
+  // 1. Try known service/char pairs
   for (const { service: svcUuid, char: charUuid } of BLE_SERVICES) {
     try {
       const svc = await server.getPrimaryService(svcUuid)
-      characteristic = await svc.getCharacteristic(charUuid)
-      break
-    } catch {
-      // try next service
-    }
+      const c = await svc.getCharacteristic(charUuid)
+      if (c.properties.write || c.properties.writeWithoutResponse) {
+        characteristic = c; break
+      }
+    } catch { /* try next */ }
+  }
+
+  // 2. Fallback: scan ALL services for any writable characteristic
+  if (!characteristic) {
+    try {
+      const services = await server.getPrimaryServices()
+      outer: for (const svc of services) {
+        const chars = await svc.getCharacteristics()
+        for (const c of chars) {
+          if (c.properties.write || c.properties.writeWithoutResponse) {
+            characteristic = c; break outer
+          }
+        }
+      }
+    } catch { /* ignore */ }
   }
 
   if (!characteristic) {
     device.gatt.disconnect()
-    throw new Error('Could not find a compatible print characteristic. Check your printer model.')
+    throw new Error('No writable characteristic found on this printer. Try USB mode instead.')
   }
 
-  // Cache connection — keep alive (do NOT disconnect) so next print skips the picker
   _ble = { device, characteristic }
   device.addEventListener('gattserverdisconnected', () => { _ble = null })
 
@@ -263,9 +276,18 @@ export async function printBluetooth(data) {
 }
 
 async function sendBleData(characteristic, data) {
-  const CHUNK = 200
+  // Use writeValueWithoutResponse when available — required by many thermal printers
+  const useNoResp = characteristic.properties.writeWithoutResponse
+  const CHUNK = useNoResp ? 512 : 200
   for (let i = 0; i < data.length; i += CHUNK) {
-    await characteristic.writeValue(data.slice(i, i + CHUNK))
+    const chunk = data.slice(i, i + CHUNK)
+    if (useNoResp) {
+      await characteristic.writeValueWithoutResponse(chunk)
+      // Small delay to avoid buffer overflow on printer
+      await new Promise(r => setTimeout(r, 20))
+    } else {
+      await characteristic.writeValue(chunk)
+    }
   }
 }
 
