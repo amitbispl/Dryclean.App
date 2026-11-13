@@ -724,21 +724,28 @@ app.MapPut("/api/settings", async (AppDbContext db, ClaimsPrincipal claims, Sett
     var prefix = companyId.HasValue ? $"_{companyId}" : "";
     var updates = new Dictionary<string, string>
     {
-        [$"shop_name{prefix}"] = input.ShopName,
-        [$"shop_address{prefix}"] = input.ShopAddress,
-        [$"shop_city{prefix}"] = input.ShopCity,
-        [$"shop_phone{prefix}"] = input.ShopPhone,
-        [$"whatsapp{prefix}"] = input.Whatsapp.ToString().ToLower(),
-        [$"barcode{prefix}"] = input.Barcode.ToString().ToLower(),
-        [$"sms{prefix}"] = input.Sms.ToString().ToLower(),
+        [$"shop_name{prefix}"]    = input.ShopName    ?? "",
+        [$"shop_address{prefix}"] = input.ShopAddress ?? "",
+        [$"shop_city{prefix}"]    = input.ShopCity    ?? "",
+        [$"shop_phone{prefix}"]   = input.ShopPhone   ?? "",
+        [$"whatsapp{prefix}"]     = input.Whatsapp.ToString().ToLower(),
+        [$"barcode{prefix}"]      = input.Barcode.ToString().ToLower(),
+        [$"sms{prefix}"]          = input.Sms.ToString().ToLower(),
     };
-    foreach (var kv in updates)
+    try
     {
-        var s = await db.Settings.FindAsync(kv.Key);
-        if (s is null) db.Settings.Add(new Setting { Key = kv.Key, CompanyId = companyId, Value = kv.Value });
-        else s.Value = kv.Value;
+        foreach (var kv in updates)
+        {
+            var s = await db.Settings.FirstOrDefaultAsync(x => x.Key == kv.Key);
+            if (s is null) db.Settings.Add(new Setting { Key = kv.Key, CompanyId = companyId, Value = kv.Value });
+            else s.Value = kv.Value;
+        }
+        await db.SaveChangesAsync();
     }
-    await db.SaveChangesAsync();
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: ex.Message, title: "Settings save failed", statusCode: 500);
+    }
     return Results.Ok(input);
 }).RequireAuthorization();
 
