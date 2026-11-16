@@ -563,8 +563,8 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     <span>${shopName}</span>
     <span>${detail.id}</span>
   </div>
-  <div class="bc-wrap"><svg id="bc"></svg></div>
   <div class="bottom">${detail.customerName || ''} ${orderDate ? '· ' + orderDate : ''} ${itemsSummary ? '· ' + itemsSummary : ''}</div>
+  <div class="bc-wrap"><svg id="bc"></svg></div>
 </div>
 </body>
 </html>`
