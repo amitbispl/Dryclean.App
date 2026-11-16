@@ -149,17 +149,15 @@ try {
   $pd = New-Object System.Drawing.Printing.PrintDocument
   $pd.PrinterSettings.PrinterName = '${safePrinter}'
   $pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0, 0, 0, 0)
-  $pd.DefaultPageSettings.PaperSize = New-Object System.Drawing.Printing.PaperSize("Custom", 100, 200)
   $pd.add_PrintPage([System.Drawing.Printing.PrintPageEventHandler]{
     param($s, $e)
     $pb = $e.PageBounds
     $imgW = $script:img.Width
     $imgH = $script:img.Height
     if ($pb.Height -gt $pb.Width -and $imgW -gt $imgH) {
+      $e.Graphics.RotateTransform(-90)
       $e.Graphics.TranslateTransform($pb.Width, 0)
-      $e.Graphics.RotateTransform(90)
-      $rect = New-Object System.Drawing.Rectangle(0, 0, $pb.Height, $pb.Width)
-      $e.Graphics.DrawImage($script:img, $rect)
+      $e.Graphics.DrawImage($script:img, 0, 0, $pb.Height, $pb.Width)
     } else {
       $e.Graphics.DrawImage($script:img, $pb)
     }
