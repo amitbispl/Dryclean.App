@@ -154,7 +154,7 @@ try {
     $pb = $e.PageBounds
     $imgW = $script:img.Width
     $imgH = $script:img.Height
-    Write-Host "DEBUG pb=$($pb.Width)x$($pb.Height) img=${imgW}x${imgH}"
+    Write-Host "DEBUG pb=$($pb.Width)x$($pb.Height) img=$imgW x $imgH"
     if ($pb.Height -gt $pb.Width -and $imgW -gt $imgH) {
       $m = New-Object System.Drawing.Drawing2D.Matrix([float]0, [float](-1), [float]1, [float]0, [float]0, [float]$pb.Height)
       $e.Graphics.Transform = $m
