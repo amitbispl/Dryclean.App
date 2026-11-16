@@ -604,27 +604,27 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
     })
   }
 
-  // Portrait canvas: 1in × 2in at 2× = 192 × 384px.
-  // Driver stock is portrait (25.4mm × 50.8mm) — portrait canvas maps directly,
-  // no rotation needed. Service detects matching orientations and draws straight.
+  // Landscape canvas: 2in × 1in at 2× = 384 × 192px.
+  // Service detects portrait PageBounds (driver stock portrait) + landscape image,
+  // rotates 90° CW before drawing. Driver 90° CCW cancels it → upright on label.
   const SCALE = 2
-  const W = 96 * SCALE    // 192px = 1in wide
-  const H = 192 * SCALE   // 384px = 2in tall
+  const W = 192 * SCALE   // 384px = 2in wide
+  const H = 96 * SCALE    // 192px = 1in tall
   const pt = (p) => Math.round(p / 72 * 96 * SCALE)
 
-  // Small barcode at bottom (no display text — ID shown large above)
+  // Barcode canvas (no display text — order ID shown large in text above)
   const bcCanvas = document.createElement('canvas')
   window.JsBarcode(bcCanvas, barcodeValue, {
     format: 'CODE128',
-    width: 1.5 * SCALE,
-    height: 28 * SCALE,
+    width: 2 * SCALE,
+    height: 30 * SCALE,
     displayValue: false,
     margin: 1 * SCALE,
     background: '#ffffff',
     lineColor: '#000000',
   })
 
-  // Compose portrait label (192 × 384)
+  // Compose landscape label (384 × 192)
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
@@ -634,41 +634,39 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.fillRect(0, 0, W, H)
   ctx.fillStyle = '#000000'
 
-  // Shop name — small, centered at top
-  ctx.font = `bold ${pt(7)}px Arial`
-  ctx.textAlign = 'center'
-  ctx.fillText(shopName, W / 2, Math.round(11 * SCALE))
+  // ── Left column: shop name + large order ID ──────────────────────────
+  const colSplit = Math.round(W * 0.52)  // left 52% for ID, right 48% for details
 
-  // Separator
-  ctx.fillRect(0, Math.round(14 * SCALE), W, 1)
-
-  // Order ID — large and bold
-  ctx.font = `bold ${pt(20)}px Arial`
+  ctx.font = `bold ${pt(6.5)}px Arial`
   ctx.textAlign = 'left'
-  ctx.fillText(barcodeValue, Math.round(2 * SCALE), Math.round(37 * SCALE))
+  ctx.fillText(shopName, Math.round(3 * SCALE), Math.round(9 * SCALE))
 
-  // Separator below ID
-  ctx.fillRect(0, Math.round(41 * SCALE), W, 1)
+  ctx.font = `bold ${pt(16)}px Arial`
+  ctx.fillText(barcodeValue, Math.round(3 * SCALE), Math.round(30 * SCALE))
 
-  // Detail lines — customer name, mobile, date, items
-  ctx.font = `${pt(7)}px Arial`
-  ctx.textAlign = 'left'
-  let curY = Math.round(52 * SCALE)
-  const lineH = Math.round(10 * SCALE)
-  const bcAreaStart = H - Math.round(42 * SCALE)  // reserve bottom for barcode
+  // ── Right column: customer details ──────────────────────────────────
+  ctx.font = `${pt(6.5)}px Arial`
+  const detX = colSplit + Math.round(3 * SCALE)
+  let detY = Math.round(10 * SCALE)
+  const detLineH = Math.round(9.5 * SCALE)
 
   for (const line of [custName, mobile, entryDate, ...itemLines].filter(Boolean)) {
-    if (curY + lineH > bcAreaStart) break
-    ctx.fillText(line, Math.round(2 * SCALE), curY)
-    curY += lineH
+    if (detY > Math.round(44 * SCALE)) break
+    ctx.fillText(line, detX, detY)
+    detY += detLineH
   }
 
-  // Barcode — scaled to fill label width, anchored to bottom
+  // ── Separator ────────────────────────────────────────────────────────
+  ctx.fillRect(0, Math.round(48 * SCALE), W, 1)
+
+  // ── Barcode — fills remaining height ─────────────────────────────────
+  const bcY = Math.round(50 * SCALE)
+  const bcAvailH = H - bcY - Math.round(2 * SCALE)
   const bcScaleX = W / bcCanvas.width
   const bcDrawW = W
-  const bcDrawH = Math.round(bcCanvas.height * bcScaleX)
+  const bcDrawH = Math.min(Math.round(bcCanvas.height * bcScaleX), bcAvailH)
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(bcCanvas, 0, H - bcDrawH - Math.round(2 * SCALE), bcDrawW, bcDrawH)
+  ctx.drawImage(bcCanvas, 0, bcY, bcDrawW, bcDrawH)
 
   const imageBase64 = canvas.toDataURL('image/png').split(',')[1]
 
