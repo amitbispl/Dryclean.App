@@ -516,7 +516,7 @@ export async function listServicePrinters(serviceUrl = 'http://127.0.0.1:9100') 
   return json.printers || []
 }
 
-// Browser print tag — 2" × 1" label size
+// Browser print tag — 1" × 2" label size (portrait, matches 25.4mm × 50.8mm die-cut stock)
 export function printBrowserTag(detail, fmtDate, settings = {}) {
   const shopName = settings.shopName || 'WashMitra'
   const barcodeValue = detail.id  // order ID only — keeps barcode short and readable
@@ -532,32 +532,28 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 <title>Tag — ${detail.id}</title>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
 <style>
-  @page { size: 2in 1in; margin: 0; }
+  @page { size: 1in 2in; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
     font-family: Arial, sans-serif;
-    width: 2in; height: 1in;
+    width: 1in; height: 2in;
     overflow: hidden;
   }
-  .wrap { padding: 1.5mm 2mm 0 2mm; width: 2in; height: 1in; overflow: hidden; }
-  .header {
-    display: flex; justify-content: space-between; align-items: baseline;
-    border-bottom: 0.8px solid #000; padding-bottom: 1px; margin-bottom: 1.5px;
-    width: 100%;
-  }
-  .shop { font-size: 8px; color: #555; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
-  .order-id { font-size: 15px; font-weight: 900; flex-shrink: 0; margin-left: 4px; }
-  .cust { font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
-  .info { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
-  svg { display: block; width: 100%; }
+  .wrap { padding: 1mm 1.5mm; width: 1in; height: 2in; overflow: hidden; }
+  .shop { font-size: 7px; color: #555; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .divider { border-top: 0.8px solid #000; margin: 1.5px 0; }
+  .order-id { font-size: 17px; font-weight: 900; text-align: center; letter-spacing: 0.5px; line-height: 1.1; }
+  .cust { font-size: 9.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .info { font-size: 7.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  svg { display: block; width: 100%; margin-top: 1px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="header">
-    <span class="shop">${shopName}</span>
-    <span class="order-id">${detail.id}</span>
-  </div>
+  <div class="shop">${shopName}</div>
+  <div class="divider"></div>
+  <div class="order-id">${detail.id}</div>
+  <div class="divider"></div>
   <div class="cust">${detail.custName || ''}</div>
   <div class="info">${detail.mobile || ''} &nbsp;|&nbsp; ${fmtDate(detail.deliveryDate)}</div>
   ${itemsSummary ? `<div class="info">${itemsSummary}</div>` : ''}
@@ -565,8 +561,8 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 </div>
 <script>
   JsBarcode('#bc', '${barcodeValue}', {
-    format: 'CODE128', width: 1.1, height: 12,
-    displayValue: true, fontSize: 7, margin: 0, textMargin: 0,
+    format: 'CODE128', width: 1, height: 20,
+    displayValue: true, fontSize: 7, margin: 1, textMargin: 0,
   });
   window.onload = () => window.print();
 <\/script>
