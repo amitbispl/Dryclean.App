@@ -145,16 +145,16 @@ function printImage(printerName, imageBase64) {
       const ps = `
 Add-Type -AssemblyName System.Drawing
 try {
-  $img = [System.Drawing.Image]::FromFile('${safePath}')
+  $script:img = [System.Drawing.Image]::FromFile('${safePath}')
   $pd = New-Object System.Drawing.Printing.PrintDocument
   $pd.PrinterSettings.PrinterName = '${safePrinter}'
   $pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0, 0, 0, 0)
-  $pd.add_PrintPage({
+  $pd.add_PrintPage([System.Drawing.Printing.PrintPageEventHandler]{
     param($s, $e)
-    $e.Graphics.DrawImage($img, $e.PageBounds)
+    $e.Graphics.DrawImage($script:img, $e.PageBounds)
   })
   $pd.Print()
-  $img.Dispose()
+  $script:img.Dispose()
   $pd.Dispose()
   Write-Output 'true'
 } catch {
