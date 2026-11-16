@@ -10,14 +10,11 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = 9100;
-const ALLOWED_ORIGINS = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function corsHeaders(origin) {
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
-    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Origin': origin || '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': 'application/json',
@@ -155,13 +152,9 @@ try {
     $imgW = $script:img.Width
     $imgH = $script:img.Height
     Write-Host "DEBUG pb=$($pb.Width)x$($pb.Height) img=$imgW x $imgH"
-    if ($pb.Height -gt $pb.Width -and $imgW -gt $imgH) {
-      $m = New-Object System.Drawing.Drawing2D.Matrix([float]0, [float](-1), [float]1, [float]0, [float]0, [float]$pb.Height)
-      $e.Graphics.Transform = $m
-      $e.Graphics.DrawImage($script:img, 0, 0, $pb.Height, $pb.Width)
-    } else {
-      $e.Graphics.DrawImage($script:img, $pb)
-    }
+    $m = New-Object System.Drawing.Drawing2D.Matrix([float]0, [float]1, [float](-1), [float]0, [float]$pb.Width, [float]0)
+    $e.Graphics.Transform = $m
+    $e.Graphics.DrawImage($script:img, 0, 0, $pb.Height, $pb.Width)
   })
   $pd.Print()
   $script:img.Dispose()

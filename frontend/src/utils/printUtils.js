@@ -616,8 +616,8 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   const bcCanvas = document.createElement('canvas')
   window.JsBarcode(bcCanvas, barcodeValue, {
     format: 'CODE128',
-    width: 2 * SCALE,
-    height: 30 * SCALE,
+    width: 1 * SCALE,
+    height: 28 * SCALE,
     displayValue: false,
     margin: 1 * SCALE,
     background: '#ffffff',
@@ -634,39 +634,60 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.fillRect(0, 0, W, H)
   ctx.fillStyle = '#000000'
 
-  // ── Left column: shop name + large order ID ──────────────────────────
-  const colSplit = Math.round(W * 0.52)  // left 52% for ID, right 48% for details
+  // ── Header bar: shop name ─────────────────────────────────────────
+  const pad = Math.round(3 * SCALE)
+  const headerH = Math.round(9 * SCALE)
 
-  ctx.font = `bold ${pt(5)}px Arial`
+  ctx.fillStyle = '#000000'
+  ctx.fillRect(0, 0, W, headerH)
+  ctx.fillStyle = '#ffffff'
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'center'
+  ctx.font = `bold ${pt(4)}px Arial`
+  ctx.fillText(shopName, Math.round(W / 2), Math.round(headerH / 2))
+
+  // ── Body: order ID left | details right ─────────────────────────────
+  ctx.fillStyle = '#000000'
+  ctx.textBaseline = 'top'
   ctx.textAlign = 'left'
-  ctx.fillText(shopName, Math.round(3 * SCALE), Math.round(8 * SCALE))
+  const bodyY = headerH + Math.round(2 * SCALE)
+  const colSplit = Math.round(W * 0.45)
 
-  ctx.font = `bold ${pt(12)}px Arial`
-  ctx.fillText(barcodeValue, Math.round(3 * SCALE), Math.round(26 * SCALE))
+  ctx.font = `bold ${pt(9)}px Arial`
+  ctx.fillText(barcodeValue, pad, bodyY + Math.round(2 * SCALE))
 
-  // ── Right column: customer details ──────────────────────────────────
-  ctx.font = `${pt(5)}px Arial`
-  const detX = colSplit + Math.round(3 * SCALE)
-  let detY = Math.round(9 * SCALE)
-  const detLineH = Math.round(8 * SCALE)
+  // Vertical divider
+  ctx.fillRect(colSplit, bodyY, 1, Math.round(28 * SCALE))
 
-  for (const line of [custName, mobile, entryDate, ...itemLines].filter(Boolean)) {
-    if (detY > Math.round(38 * SCALE)) break
+  // Right: customer details
+  const detX = colSplit + Math.round(4 * SCALE)
+  let detY = bodyY + Math.round(1 * SCALE)
+  const detLineH = Math.round(7 * SCALE)
+
+  ctx.font = `bold ${pt(3.5)}px Arial`
+  if (custName) { ctx.fillText(custName, detX, detY); detY += detLineH }
+
+  ctx.font = `${pt(3)}px Arial`
+  for (const line of [mobile, entryDate, ...itemLines].filter(Boolean)) {
+    if (detY > bodyY + Math.round(26 * SCALE)) break
     ctx.fillText(line, detX, detY)
     detY += detLineH
   }
 
-  // ── Separator ────────────────────────────────────────────────────────
-  ctx.fillRect(0, Math.round(42 * SCALE), W, 1)
+  // ── Thin separator ──────────────────────────────────────────────────
+  const sepY = bodyY + Math.round(30 * SCALE)
+  ctx.fillRect(pad, sepY, W - pad * 2, 1)
 
-  // ── Barcode — fills remaining height ─────────────────────────────────
-  const bcY = Math.round(44 * SCALE)
+  // ── Barcode — centered, native width for crisp scanning ─────────────
+  const bcY = sepY + Math.round(2 * SCALE)
   const bcAvailH = H - bcY - Math.round(2 * SCALE)
-  const bcScaleX = W / bcCanvas.width
-  const bcDrawW = W
-  const bcDrawH = Math.min(Math.round(bcCanvas.height * bcScaleX), bcAvailH)
+  const bcMaxW = W - pad * 2
+  const bcScaleR = bcCanvas.width > bcMaxW ? bcMaxW / bcCanvas.width : 1
+  const bcDrawW = Math.round(bcCanvas.width * bcScaleR)
+  const bcDrawH = Math.min(Math.round(bcCanvas.height * bcScaleR), bcAvailH)
+  const bcX = Math.round((W - bcDrawW) / 2)
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(bcCanvas, 0, bcY, bcDrawW, bcDrawH)
+  ctx.drawImage(bcCanvas, bcX, bcY, bcDrawW, bcDrawH)
 
   const imageBase64 = canvas.toDataURL('image/png').split(',')[1]
 
