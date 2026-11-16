@@ -575,3 +575,87 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     win.document.close()
   }
 }
+
+// --- Silent tag print via local service (GDI-compatible, no browser dialog) ---
+// Same architecture as receipt service printing: React renders to PNG canvas,
+// POSTs to /print-image, service uses System.Drawing (Windows GDI) to print silently.
+// Works with BarTender GDI driver and all other Windows GDI printer drivers.
+export async function printTagViaService(detail, fmtDate, settings = {}) {
+  const shopName = settings.shopName || 'WashMitra'
+  const barcodeValue = detail.id
+  const customerName = detail.customerName || ''
+  const orderDate = detail.createdAt ? fmtDate(detail.createdAt) : ''
+  const printerName = settings.tagPrinterName || ''
+  const serviceUrl = settings.serviceUrl || 'http://127.0.0.1:9100'
+
+  if (!printerName) throw new Error('No tag printer name set. Go to Settings → Tag Printer Name.')
+
+  // Load JsBarcode
+  if (!window.JsBarcode) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script')
+      s.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js'
+      s.onload = resolve
+      s.onerror = () => reject(new Error('JsBarcode CDN load failed'))
+      document.head.appendChild(s)
+    })
+  }
+
+  // Render label at 2× for crisp print: 2in × 1in at 192dpi = 384 × 192px
+  const SCALE = 2
+  const W = 192 * SCALE   // 384
+  const H = 96 * SCALE    // 192
+
+  // Barcode on its own canvas first
+  const bcCanvas = document.createElement('canvas')
+  window.JsBarcode(bcCanvas, barcodeValue, {
+    format: 'CODE128',
+    width: 2 * SCALE,
+    height: 50 * SCALE,
+    displayValue: true,
+    fontSize: 8 * SCALE,
+    margin: 2 * SCALE,
+    textMargin: 1 * SCALE,
+    background: '#ffffff',
+    lineColor: '#000000',
+  })
+
+  // Compose full label
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, W, H)
+  ctx.fillStyle = '#000000'
+
+  // Shop name — bold, centered
+  ctx.font = `bold ${Math.round(8 / 72 * 96 * SCALE)}px Arial`
+  ctx.textAlign = 'center'
+  ctx.fillText(shopName, W / 2, Math.round(11 * SCALE))
+
+  // Order ID left, customer + date right
+  ctx.font = `${Math.round(6.5 / 72 * 96 * SCALE)}px Arial`
+  ctx.textAlign = 'left'
+  ctx.fillText(barcodeValue, Math.round(3 * SCALE), Math.round(21 * SCALE))
+  const infoRight = [customerName, orderDate].filter(Boolean).join(' · ')
+  if (infoRight) {
+    ctx.textAlign = 'right'
+    ctx.fillText(infoRight, W - Math.round(3 * SCALE), Math.round(21 * SCALE))
+  }
+
+  // Barcode fills remaining height — nearest-neighbour to keep bar edges sharp
+  ctx.imageSmoothingEnabled = false
+  ctx.drawImage(bcCanvas, 0, Math.round(24 * SCALE), W, H - Math.round(24 * SCALE))
+
+  const imageBase64 = canvas.toDataURL('image/png').split(',')[1]
+
+  const res = await fetch(`${serviceUrl}/print-image`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ printer: printerName, image: imageBase64 }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok || !json.ok) throw new Error(json.error || `Print service error ${res.status}`)
+}

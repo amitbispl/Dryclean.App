@@ -127,6 +127,60 @@ Write-Output $ok
   });
 }
 
+// ── Print PNG via System.Drawing (GDI) ───────────────────────────────────────
+// Works with BarTender GDI driver and all standard Windows GDI printer drivers.
+// Receives base64 PNG, prints it at the driver's configured paper size (no dialog).
+
+function printImage(printerName, imageBase64) {
+  return new Promise((resolve) => {
+    const pngBuf = Buffer.from(imageBase64, 'base64');
+    const tmpPng = path.join(os.tmpdir(), `label_${Date.now()}.png`);
+
+    fs.writeFile(tmpPng, pngBuf, (writeErr) => {
+      if (writeErr) { resolve({ ok: false, error: writeErr.message }); return; }
+
+      const safePrinter = printerName.replace(/'/g, "''");
+      const safePath = tmpPng.replace(/\\/g, '\\\\');
+
+      const ps = `
+Add-Type -AssemblyName System.Drawing
+try {
+  $img = [System.Drawing.Image]::FromFile('${safePath}')
+  $pd = New-Object System.Drawing.Printing.PrintDocument
+  $pd.PrinterSettings.PrinterName = '${safePrinter}'
+  $pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0, 0, 0, 0)
+  $pd.add_PrintPage({
+    param($s, $e)
+    $e.Graphics.DrawImage($img, $e.PageBounds)
+  })
+  $pd.Print()
+  $img.Dispose()
+  $pd.Dispose()
+  Write-Output 'true'
+} catch {
+  Write-Output "false:$($_.Exception.Message)"
+}`.trim();
+
+      const psFile = path.join(os.tmpdir(), `printimg_${Date.now()}.ps1`);
+      fs.writeFile(psFile, ps, (psErr) => {
+        if (psErr) { resolve({ ok: false, error: psErr.message }); return; }
+
+        exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}"`, (err, stdout) => {
+          fs.unlink(tmpPng, () => {});
+          fs.unlink(psFile, () => {});
+          if (err) { resolve({ ok: false, error: err.message }); return; }
+          const r = stdout.trim();
+          if (r.startsWith('false:')) {
+            resolve({ ok: false, error: r.substring(6) });
+          } else {
+            resolve({ ok: r === 'true' });
+          }
+        });
+      });
+    });
+  });
+}
+
 // ── HTTP Server ───────────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -169,6 +223,27 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST /print-image  { printer: string, image: base64png }
+  // Saves PNG and prints via System.Drawing (GDI) — works with BarTender GDI driver
+  if (req.method === 'POST' && url.pathname === '/print-image') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', async () => {
+      try {
+        const { printer, image } = JSON.parse(body);
+        if (!printer || !image) {
+          respond(res, 400, { ok: false, error: 'printer and image are required' }, origin);
+          return;
+        }
+        const result = await printImage(printer, image);
+        respond(res, result.ok ? 200 : 500, result, origin);
+      } catch (e) {
+        respond(res, 400, { ok: false, error: e.message }, origin);
+      }
+    });
+    return;
+  }
+
   // Health check
   if (req.method === 'GET' && url.pathname === '/') {
     respond(res, 200, { status: 'ok', service: 'DrycleanPrintService', port: PORT }, origin);
@@ -181,7 +256,8 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`\nDryclean Print Service running at http://127.0.0.1:${PORT}`);
   console.log('Endpoints:');
-  console.log('  GET  /printers  — list installed Windows printers');
-  console.log('  POST /print     — { printer, data: base64 } — send raw bytes silently');
+  console.log('  GET  /printers       — list installed Windows printers');
+  console.log('  POST /print          — { printer, data: base64 } — send raw ESC/POS bytes');
+  console.log('  POST /print-image    — { printer, image: base64png } — GDI image print (BarTender driver)');
   console.log('\nPress Ctrl+C to stop.\n');
 });
