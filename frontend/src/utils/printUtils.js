@@ -540,7 +540,6 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     width: 1in; height: 2in;
     display: flex; flex-direction: column;
     overflow: hidden;
-    break-inside: avoid; page-break-inside: avoid;
   }
   .shop { font-size: 7px; color: #555; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; flex-shrink: 0; }
   .divider { border-top: 0.5px solid #000; margin: 1px 0; flex-shrink: 0; }
@@ -550,6 +549,15 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
   .bc { flex: 1 1 0; min-height: 0; overflow: hidden; }
   svg { display: block; width: 100%; }
 </style>
+<script>
+  window.addEventListener('load', function() {
+    JsBarcode('#bc', '${barcodeValue}', {
+      format: 'CODE128', width: 1, height: 80,
+      displayValue: true, fontSize: 7, margin: 1, textMargin: 0,
+    });
+    window.print();
+  });
+<\/script>
 </head>
 <body>
 <div class="wrap">
@@ -563,13 +571,6 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
   ${itemsSummary ? `<div class="info">${itemsSummary}</div>` : ''}
   <div class="bc"><svg id="bc"></svg></div>
 </div>
-<script>
-  JsBarcode('#bc', '${barcodeValue}', {
-    format: 'CODE128', width: 1.5, height: 26,
-    displayValue: true, fontSize: 7, margin: 1, textMargin: 0,
-  });
-  window.onload = () => window.print();
-<\/script>
 </body>
 </html>`
 
