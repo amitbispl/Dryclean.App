@@ -533,19 +533,19 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
 <style>
   @page { size: 1in 2in; margin: 0; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; page-break-inside: avoid; break-inside: avoid; }
   html, body {
     font-family: Arial, sans-serif;
     width: 1in; height: 2in;
     overflow: hidden;
   }
-  .wrap { padding: 1.5mm 1.5mm 1mm 1.5mm; width: 1in; height: 2in; overflow: hidden; display: flex; flex-direction: column; }
-  .shop { font-size: 9px; color: #555; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wrap { padding: 1.5mm 1.5mm 0 1.5mm; width: 1in; height: 2in; overflow: hidden; }
+  .shop { font-size: 8px; color: #555; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
   .divider { border-top: 0.8px solid #000; margin: 2px 0; }
-  .order-id { font-size: 18px; font-weight: 900; text-align: center; line-height: 1.1; }
-  .cust { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-  .info { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
-  svg { display: block; width: 100%; flex-shrink: 0; }
+  .order-id { font-size: 15px; font-weight: 900; text-align: center; line-height: 1.15; white-space: nowrap; overflow: hidden; }
+  .cust { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .info { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  svg { display: block; width: 100%; }
 </style>
 </head>
 <body>
@@ -562,7 +562,7 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 </div>
 <script>
   JsBarcode('#bc', '${barcodeValue}', {
-    format: 'CODE128', width: 1, height: 38,
+    format: 'CODE128', width: 1, height: 28,
     displayValue: true, fontSize: 7, margin: 1, textMargin: 0,
   });
   window.onload = () => window.print();
