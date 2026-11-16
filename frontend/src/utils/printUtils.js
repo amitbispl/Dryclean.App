@@ -525,10 +525,10 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     .map(it => `${it.productName}×${it.qty}`)
     .join(', ')
 
-  // Single label — barcode fills the full 2in×1in physical label.
-  // Browser layout: 1in×2in portrait (96px×192px). Driver (landscape) rotates to 2in×1in physical.
-  // SVG height pinned to 191px (1px under page height) so Chrome never generates a 2nd page.
-  // preserveAspectRatio="none" stretches barcode to fill the full SVG area.
+  // Single label — 2in×1in physical landscape label with barcode + order details.
+  // CSS page: 2in×1in landscape → maps directly to physical 50.8mm×25.4mm label (driver in Portrait mode).
+  // Total content height ≤ 94px (2px under 96px = 1in page height) → exactly 1 label per print.
+  const orderDate = detail.createdAt ? fmtDate(detail.createdAt) : ''
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -536,17 +536,21 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 <title>Tag — ${detail.id}</title>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
 <style>
-  @page { size: 1in 2in; margin: 0; }
+  @page { size: 2in 1in; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 1in; }
+  html, body { width: 2in; font-family: Arial, sans-serif; }
   body { page-break-after: avoid; break-after: avoid; }
-  svg { display: block; width: 1in; height: 191px; }
+  .label { width: 2in; height: 94px; display: flex; flex-direction: column; padding: 2px 3px; }
+  .top { display: flex; justify-content: space-between; font-size: 7pt; font-weight: bold; line-height: 1.2; }
+  .bc-wrap { flex: 1; min-height: 0; }
+  svg { display: block; width: 100%; height: 100%; }
+  .bottom { font-size: 6.5pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 <script>
   window.addEventListener('load', function() {
     JsBarcode('#bc', '${barcodeValue}', {
-      format: 'CODE128', width: 1, height: 180,
-      displayValue: true, fontSize: 10, margin: 4, textMargin: 2,
+      format: 'CODE128', width: 2, height: 50,
+      displayValue: true, fontSize: 8, margin: 2, textMargin: 1,
     });
     document.getElementById('bc').setAttribute('preserveAspectRatio', 'none');
     window.print();
@@ -554,7 +558,14 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 <\/script>
 </head>
 <body>
-<svg id="bc"></svg>
+<div class="label">
+  <div class="top">
+    <span>${shopName}</span>
+    <span>${detail.id}</span>
+  </div>
+  <div class="bc-wrap"><svg id="bc"></svg></div>
+  <div class="bottom">${detail.customerName || ''} ${orderDate ? '· ' + orderDate : ''} ${itemsSummary ? '· ' + itemsSummary : ''}</div>
+</div>
 </body>
 </html>`
 
