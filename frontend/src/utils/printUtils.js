@@ -541,10 +541,10 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
   html, body { width: 2in; font-family: Arial, sans-serif; }
   body { page-break-after: avoid; break-after: avoid; }
   .label { width: 2in; height: 94px; display: flex; flex-direction: column; padding: 2px 3px; }
-  .top { display: flex; justify-content: space-between; font-size: 7pt; font-weight: bold; line-height: 1.2; }
+  .co { font-size: 8pt; font-weight: bold; text-align: center; line-height: 1.3; }
+  .info { display: flex; justify-content: space-between; font-size: 6.5pt; line-height: 1.2; white-space: nowrap; overflow: hidden; }
   .bc-wrap { flex: 1; min-height: 0; }
   svg { display: block; width: 100%; height: 100%; }
-  .bottom { font-size: 6.5pt; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 <script>
   window.addEventListener('load', function() {
@@ -559,11 +559,11 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 </head>
 <body>
 <div class="label">
-  <div class="top">
-    <span>${shopName}</span>
+  <div class="co">${shopName}</div>
+  <div class="info">
     <span>${detail.id}</span>
+    <span>${detail.customerName || ''} ${orderDate ? '· ' + orderDate : ''}</span>
   </div>
-  <div class="bottom">${detail.customerName || ''} ${orderDate ? '· ' + orderDate : ''} ${itemsSummary ? '· ' + itemsSummary : ''}</div>
   <div class="bc-wrap"><svg id="bc"></svg></div>
 </div>
 </body>
