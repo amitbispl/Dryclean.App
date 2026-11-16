@@ -583,8 +583,11 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 export async function printTagViaService(detail, fmtDate, settings = {}) {
   const shopName = settings.shopName || 'WashMitra'
   const barcodeValue = detail.id
-  const customerName = detail.customerName || ''
-  const orderDate = detail.createdAt ? fmtDate(detail.createdAt) : ''
+  const custName = detail.custName || detail.customerName || ''
+  const mobile = detail.mobile || detail.phone || ''
+  const entryDate = detail.entryDate ? fmtDate(detail.entryDate)
+    : detail.createdAt ? fmtDate(detail.createdAt) : ''
+  const itemLines = (detail.items || []).map(it => `${it.productName} ×${it.qty}`)
   const printerName = settings.tagPrinterName || ''
   const serviceUrl = settings.serviceUrl || 'http://127.0.0.1:9100'
 
@@ -601,29 +604,27 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
     })
   }
 
-  // Render landscape canvas: 2in × 1in at 2× = 384 × 192px.
-  // Service detects portrait PageBounds (driver stock = 25.4mm×50.8mm) and rotates
-  // the Graphics 90° CW before drawing. Driver then rotates 90° CCW to physical landscape.
-  // Net rotation = 0° → content is upright and readable on the physical label.
+  // Portrait canvas: 1in × 2in at 2× = 192 × 384px.
+  // Driver stock is portrait (25.4mm × 50.8mm) — portrait canvas maps directly,
+  // no rotation needed. Service detects matching orientations and draws straight.
   const SCALE = 2
-  const W = 192 * SCALE   // 384px = 2in wide  (landscape)
-  const H = 96 * SCALE    // 192px = 1in tall
+  const W = 96 * SCALE    // 192px = 1in wide
+  const H = 192 * SCALE   // 384px = 2in tall
+  const pt = (p) => Math.round(p / 72 * 96 * SCALE)
 
-  // Barcode on its own canvas
+  // Small barcode at bottom (no display text — ID shown large above)
   const bcCanvas = document.createElement('canvas')
   window.JsBarcode(bcCanvas, barcodeValue, {
     format: 'CODE128',
-    width: 2 * SCALE,
-    height: 55 * SCALE,
-    displayValue: true,
-    fontSize: 8 * SCALE,
-    margin: 2 * SCALE,
-    textMargin: 1 * SCALE,
+    width: 1.5 * SCALE,
+    height: 28 * SCALE,
+    displayValue: false,
+    margin: 1 * SCALE,
     background: '#ffffff',
     lineColor: '#000000',
   })
 
-  // Compose full label (landscape: 384×192)
+  // Compose portrait label (192 × 384)
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
@@ -633,25 +634,41 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.fillRect(0, 0, W, H)
   ctx.fillStyle = '#000000'
 
-  // Shop name — bold, centered
-  ctx.font = `bold ${Math.round(8 / 72 * 96 * SCALE)}px Arial`
+  // Shop name — small, centered at top
+  ctx.font = `bold ${pt(7)}px Arial`
   ctx.textAlign = 'center'
   ctx.fillText(shopName, W / 2, Math.round(11 * SCALE))
 
-  // Order ID left, customer + date right
-  ctx.font = `${Math.round(6.5 / 72 * 96 * SCALE)}px Arial`
+  // Separator
+  ctx.fillRect(0, Math.round(14 * SCALE), W, 1)
+
+  // Order ID — large and bold
+  ctx.font = `bold ${pt(20)}px Arial`
   ctx.textAlign = 'left'
-  ctx.fillText(barcodeValue, Math.round(3 * SCALE), Math.round(21 * SCALE))
-  const infoRight = [customerName, orderDate].filter(Boolean).join(' · ')
-  if (infoRight) {
-    ctx.textAlign = 'right'
-    ctx.fillText(infoRight, W - Math.round(3 * SCALE), Math.round(21 * SCALE))
+  ctx.fillText(barcodeValue, Math.round(2 * SCALE), Math.round(37 * SCALE))
+
+  // Separator below ID
+  ctx.fillRect(0, Math.round(41 * SCALE), W, 1)
+
+  // Detail lines — customer name, mobile, date, items
+  ctx.font = `${pt(7)}px Arial`
+  ctx.textAlign = 'left'
+  let curY = Math.round(52 * SCALE)
+  const lineH = Math.round(10 * SCALE)
+  const bcAreaStart = H - Math.round(42 * SCALE)  // reserve bottom for barcode
+
+  for (const line of [custName, mobile, entryDate, ...itemLines].filter(Boolean)) {
+    if (curY + lineH > bcAreaStart) break
+    ctx.fillText(line, Math.round(2 * SCALE), curY)
+    curY += lineH
   }
 
-  // Barcode fills remaining height — nearest-neighbour to keep bar edges sharp
-  const bcY = Math.round(24 * SCALE)
+  // Barcode — scaled to fill label width, anchored to bottom
+  const bcScaleX = W / bcCanvas.width
+  const bcDrawW = W
+  const bcDrawH = Math.round(bcCanvas.height * bcScaleX)
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(bcCanvas, 0, bcY, W, H - bcY)
+  ctx.drawImage(bcCanvas, 0, H - bcDrawH - Math.round(2 * SCALE), bcDrawW, bcDrawH)
 
   const imageBase64 = canvas.toDataURL('image/png').split(',')[1]
 

@@ -152,7 +152,9 @@ try {
   $pd.add_PrintPage([System.Drawing.Printing.PrintPageEventHandler]{
     param($s, $e)
     $pb = $e.PageBounds
-    if ($pb.Height -gt $pb.Width) {
+    $imgW = $script:img.Width
+    $imgH = $script:img.Height
+    if ($pb.Height -gt $pb.Width -and $imgW -gt $imgH) {
       $e.Graphics.TranslateTransform($pb.Width, 0)
       $e.Graphics.RotateTransform(90)
       $rect = New-Object System.Drawing.Rectangle(0, 0, $pb.Height, $pb.Width)
