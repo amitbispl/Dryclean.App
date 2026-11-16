@@ -149,6 +149,7 @@ try {
   $pd = New-Object System.Drawing.Printing.PrintDocument
   $pd.PrinterSettings.PrinterName = '${safePrinter}'
   $pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0, 0, 0, 0)
+  $pd.DefaultPageSettings.PaperSize = New-Object System.Drawing.Printing.PaperSize("Custom", 100, 200)
   $pd.add_PrintPage([System.Drawing.Printing.PrintPageEventHandler]{
     param($s, $e)
     $pb = $e.PageBounds
