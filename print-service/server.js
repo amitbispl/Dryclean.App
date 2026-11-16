@@ -154,6 +154,7 @@ try {
     $pb = $e.PageBounds
     $imgW = $script:img.Width
     $imgH = $script:img.Height
+    Write-Host "DEBUG pb=$($pb.Width)x$($pb.Height) img=${imgW}x${imgH}"
     if ($pb.Height -gt $pb.Width -and $imgW -gt $imgH) {
       $m = New-Object System.Drawing.Drawing2D.Matrix([float]0, [float](-1), [float]1, [float]0, [float]0, [float]$pb.Height)
       $e.Graphics.Transform = $m
@@ -174,11 +175,13 @@ try {
       fs.writeFile(psFile, ps, (psErr) => {
         if (psErr) { resolve({ ok: false, error: psErr.message }); return; }
 
-        exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}"`, (err, stdout) => {
+        exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}" 2>&1`, (err, stdout) => {
           fs.unlink(tmpPng, () => {});
           fs.unlink(psFile, () => {});
+          console.log('[print-image]', stdout.trim());
           if (err) { resolve({ ok: false, error: err.message }); return; }
-          const r = stdout.trim();
+          const lines = stdout.trim().split('\n');
+          const r = lines[lines.length - 1].trim();
           if (r.startsWith('false:')) {
             resolve({ ok: false, error: r.substring(6) });
           } else {
