@@ -151,7 +151,15 @@ try {
   $pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0, 0, 0, 0)
   $pd.add_PrintPage([System.Drawing.Printing.PrintPageEventHandler]{
     param($s, $e)
-    $e.Graphics.DrawImage($script:img, $e.PageBounds)
+    $pb = $e.PageBounds
+    if ($pb.Height -gt $pb.Width) {
+      $e.Graphics.TranslateTransform($pb.Width, 0)
+      $e.Graphics.RotateTransform(90)
+      $rect = New-Object System.Drawing.Rectangle(0, 0, $pb.Height, $pb.Width)
+      $e.Graphics.DrawImage($script:img, $rect)
+    } else {
+      $e.Graphics.DrawImage($script:img, $pb)
+    }
   })
   $pd.Print()
   $script:img.Dispose()

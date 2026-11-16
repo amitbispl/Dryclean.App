@@ -601,17 +601,20 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
     })
   }
 
-  // Render label at 2× for crisp print: 2in × 1in at 192dpi = 384 × 192px
+  // Render landscape canvas: 2in × 1in at 2× = 384 × 192px.
+  // Service detects portrait PageBounds (driver stock = 25.4mm×50.8mm) and rotates
+  // the Graphics 90° CW before drawing. Driver then rotates 90° CCW to physical landscape.
+  // Net rotation = 0° → content is upright and readable on the physical label.
   const SCALE = 2
-  const W = 192 * SCALE   // 384
-  const H = 96 * SCALE    // 192
+  const W = 192 * SCALE   // 384px = 2in wide  (landscape)
+  const H = 96 * SCALE    // 192px = 1in tall
 
-  // Barcode on its own canvas first
+  // Barcode on its own canvas
   const bcCanvas = document.createElement('canvas')
   window.JsBarcode(bcCanvas, barcodeValue, {
     format: 'CODE128',
     width: 2 * SCALE,
-    height: 50 * SCALE,
+    height: 55 * SCALE,
     displayValue: true,
     fontSize: 8 * SCALE,
     margin: 2 * SCALE,
@@ -620,7 +623,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
     lineColor: '#000000',
   })
 
-  // Compose full label
+  // Compose full label (landscape: 384×192)
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
@@ -646,8 +649,9 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   }
 
   // Barcode fills remaining height — nearest-neighbour to keep bar edges sharp
+  const bcY = Math.round(24 * SCALE)
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(bcCanvas, 0, Math.round(24 * SCALE), W, H - Math.round(24 * SCALE))
+  ctx.drawImage(bcCanvas, 0, bcY, W, H - bcY)
 
   const imageBase64 = canvas.toDataURL('image/png').split(',')[1]
 
