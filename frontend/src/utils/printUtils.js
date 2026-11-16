@@ -534,20 +534,15 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 <style>
   @page { size: 1in 2in; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { font-family: Arial, sans-serif; width: 1in; height: 2in; overflow: hidden; }
-  .wrap {
-    padding: 1.5mm 1.5mm 0 1.5mm;
-    width: 1in; height: 2in;
-    display: flex; flex-direction: column;
-    overflow: hidden;
-  }
-  .shop { font-size: 7px; color: #555; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; flex-shrink: 0; }
-  .divider { border-top: 0.5px solid #000; margin: 1px 0; flex-shrink: 0; }
-  .order-id { font-size: 15px; font-weight: 900; text-align: center; line-height: 1.1; white-space: nowrap; overflow: hidden; flex-shrink: 0; }
-  .cust { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; flex-shrink: 0; }
-  .info { font-size: 8.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; flex-shrink: 0; }
-  .bc { flex: 1 1 0; min-height: 0; overflow: hidden; }
-  svg { display: block; width: 100%; }
+  html, body { font-family: Arial, sans-serif; width: 1in; }
+  body { page-break-after: avoid; break-after: avoid; }
+  .wrap { padding: 1.5mm 1.5mm 1mm 1.5mm; width: 1in; }
+  .shop { font-size: 7px; color: #555; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .divider { border-top: 0.5px solid #000; margin: 1px 0; }
+  .order-id { font-size: 15px; font-weight: 900; text-align: center; line-height: 1.1; white-space: nowrap; overflow: hidden; }
+  .cust { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  .info { font-size: 8.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+  svg { display: block; width: 100%; margin-top: 2px; }
 </style>
 <script>
   window.addEventListener('load', function() {
@@ -569,7 +564,7 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
   ${detail.mobile ? `<div class="info">${detail.mobile}</div>` : ''}
   <div class="info">${fmtDate(detail.deliveryDate)}</div>
   ${itemsSummary ? `<div class="info">${itemsSummary}</div>` : ''}
-  <div class="bc"><svg id="bc"></svg></div>
+  <svg id="bc"></svg>
 </div>
 </body>
 </html>`
