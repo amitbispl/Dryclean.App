@@ -637,30 +637,30 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   // ── Left column: shop name + large order ID ──────────────────────────
   const colSplit = Math.round(W * 0.52)  // left 52% for ID, right 48% for details
 
-  ctx.font = `bold ${pt(6.5)}px Arial`
+  ctx.font = `bold ${pt(5)}px Arial`
   ctx.textAlign = 'left'
-  ctx.fillText(shopName, Math.round(3 * SCALE), Math.round(9 * SCALE))
+  ctx.fillText(shopName, Math.round(3 * SCALE), Math.round(8 * SCALE))
 
-  ctx.font = `bold ${pt(16)}px Arial`
-  ctx.fillText(barcodeValue, Math.round(3 * SCALE), Math.round(30 * SCALE))
+  ctx.font = `bold ${pt(12)}px Arial`
+  ctx.fillText(barcodeValue, Math.round(3 * SCALE), Math.round(26 * SCALE))
 
   // ── Right column: customer details ──────────────────────────────────
-  ctx.font = `${pt(6.5)}px Arial`
+  ctx.font = `${pt(5)}px Arial`
   const detX = colSplit + Math.round(3 * SCALE)
-  let detY = Math.round(10 * SCALE)
-  const detLineH = Math.round(9.5 * SCALE)
+  let detY = Math.round(9 * SCALE)
+  const detLineH = Math.round(8 * SCALE)
 
   for (const line of [custName, mobile, entryDate, ...itemLines].filter(Boolean)) {
-    if (detY > Math.round(44 * SCALE)) break
+    if (detY > Math.round(38 * SCALE)) break
     ctx.fillText(line, detX, detY)
     detY += detLineH
   }
 
   // ── Separator ────────────────────────────────────────────────────────
-  ctx.fillRect(0, Math.round(48 * SCALE), W, 1)
+  ctx.fillRect(0, Math.round(42 * SCALE), W, 1)
 
   // ── Barcode — fills remaining height ─────────────────────────────────
-  const bcY = Math.round(50 * SCALE)
+  const bcY = Math.round(44 * SCALE)
   const bcAvailH = H - bcY - Math.round(2 * SCALE)
   const bcScaleX = W / bcCanvas.width
   const bcDrawW = W
