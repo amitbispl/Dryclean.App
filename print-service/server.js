@@ -155,8 +155,8 @@ try {
     $imgW = $script:img.Width
     $imgH = $script:img.Height
     if ($pb.Height -gt $pb.Width -and $imgW -gt $imgH) {
-      $e.Graphics.RotateTransform(-90)
-      $e.Graphics.TranslateTransform($pb.Width, 0)
+      $m = New-Object System.Drawing.Drawing2D.Matrix([float]0, [float](-1), [float]1, [float]0, [float]0, [float]$pb.Height)
+      $e.Graphics.Transform = $m
       $e.Graphics.DrawImage($script:img, 0, 0, $pb.Height, $pb.Width)
     } else {
       $e.Graphics.DrawImage($script:img, $pb)
