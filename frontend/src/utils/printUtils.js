@@ -526,8 +526,9 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     .join(', ')
 
   // Single label — barcode fills the full 2in×1in physical label.
-  // Browser layout: 1in×2in portrait. Driver (landscape) rotates to 2in×1in physical.
-  // JsBarcode height 240 → scaled to 1in CSS width → ~176px out of 192px ≈ 2in physical width.
+  // Browser layout: 1in×2in portrait (96px×192px). Driver (landscape) rotates to 2in×1in physical.
+  // SVG height pinned to 191px (1px under page height) so Chrome never generates a 2nd page.
+  // preserveAspectRatio="none" stretches barcode to fill the full SVG area.
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -537,23 +538,23 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
 <style>
   @page { size: 1in 2in; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { font-family: Arial, sans-serif; width: 1in; }
+  html, body { width: 1in; }
   body { page-break-after: avoid; break-after: avoid; }
-  .wrap { width: 1in; padding: 1mm; }
-  svg { display: block; width: 100%; }
+  svg { display: block; width: 1in; height: 191px; }
 </style>
 <script>
   window.addEventListener('load', function() {
     JsBarcode('#bc', '${barcodeValue}', {
-      format: 'CODE128', width: 1, height: 240,
-      displayValue: true, fontSize: 10, margin: 2, textMargin: 1,
+      format: 'CODE128', width: 1, height: 180,
+      displayValue: true, fontSize: 10, margin: 4, textMargin: 2,
     });
+    document.getElementById('bc').setAttribute('preserveAspectRatio', 'none');
     window.print();
   });
 <\/script>
 </head>
 <body>
-<div class="wrap"><svg id="bc"></svg></div>
+<svg id="bc"></svg>
 </body>
 </html>`
 
