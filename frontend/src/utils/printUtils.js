@@ -525,6 +525,9 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     .map(it => `${it.productName}×${it.qty}`)
     .join(', ')
 
+  // Single label — barcode fills the full 2in×1in physical label.
+  // Browser layout: 1in×2in portrait. Driver (landscape) rotates to 2in×1in physical.
+  // JsBarcode height 240 → scaled to 1in CSS width → ~176px out of 192px ≈ 2in physical width.
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -536,40 +539,25 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { font-family: Arial, sans-serif; width: 1in; }
   body { page-break-after: avoid; break-after: avoid; }
-  .wrap { padding: 1.5mm 1.5mm 1mm 1.5mm; width: 1in; }
-  .shop { font-size: 7px; color: #555; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-  .divider { border-top: 0.5px solid #000; margin: 1px 0; }
-  .order-id { font-size: 15px; font-weight: 900; text-align: center; line-height: 1.1; white-space: nowrap; overflow: hidden; }
-  .cust { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
-  .info { font-size: 8.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
-  svg { display: block; width: 100%; margin-top: 2px; }
+  .wrap { width: 1in; padding: 1mm; }
+  svg { display: block; width: 100%; }
 </style>
 <script>
   window.addEventListener('load', function() {
     JsBarcode('#bc', '${barcodeValue}', {
-      format: 'CODE128', width: 1, height: 80,
-      displayValue: true, fontSize: 7, margin: 1, textMargin: 0,
+      format: 'CODE128', width: 1, height: 240,
+      displayValue: true, fontSize: 10, margin: 2, textMargin: 1,
     });
     window.print();
   });
 <\/script>
 </head>
 <body>
-<div class="wrap">
-  <div class="shop">${shopName}</div>
-  <div class="divider"></div>
-  <div class="order-id">${detail.id}</div>
-  <div class="divider"></div>
-  <div class="cust">${detail.custName || ''}</div>
-  ${detail.mobile ? `<div class="info">${detail.mobile}</div>` : ''}
-  <div class="info">${fmtDate(detail.deliveryDate)}</div>
-  ${itemsSummary ? `<div class="info">${itemsSummary}</div>` : ''}
-  <svg id="bc"></svg>
-</div>
+<div class="wrap"><svg id="bc"></svg></div>
 </body>
 </html>`
 
-  const win = window.open('', '_blank', 'width=300,height=200')
+  const win = window.open('', '_blank', 'width=300,height=400')
   if (win) {
     win.document.write(html)
     win.document.close()
