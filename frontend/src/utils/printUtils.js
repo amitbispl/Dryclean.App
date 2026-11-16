@@ -539,13 +539,13 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
     width: 1in; height: 2in;
     overflow: hidden;
   }
-  .wrap { padding: 1mm 1.5mm; width: 1in; height: 2in; overflow: hidden; }
-  .shop { font-size: 7px; color: #555; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .divider { border-top: 0.8px solid #000; margin: 1.5px 0; }
-  .order-id { font-size: 17px; font-weight: 900; text-align: center; letter-spacing: 0.5px; line-height: 1.1; }
-  .cust { font-size: 9.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-  .info { font-size: 7.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-  svg { display: block; width: 100%; margin-top: 1px; }
+  .wrap { padding: 1.5mm 1.5mm 1mm 1.5mm; width: 1in; height: 2in; overflow: hidden; display: flex; flex-direction: column; }
+  .shop { font-size: 9px; color: #555; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .divider { border-top: 0.8px solid #000; margin: 2px 0; }
+  .order-id { font-size: 22px; font-weight: 900; text-align: center; letter-spacing: 0.5px; line-height: 1.1; }
+  .cust { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+  .info { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
+  svg { display: block; width: 100%; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -555,13 +555,14 @@ export function printBrowserTag(detail, fmtDate, settings = {}) {
   <div class="order-id">${detail.id}</div>
   <div class="divider"></div>
   <div class="cust">${detail.custName || ''}</div>
-  <div class="info">${detail.mobile || ''} &nbsp;|&nbsp; ${fmtDate(detail.deliveryDate)}</div>
+  ${detail.mobile ? `<div class="info">${detail.mobile}</div>` : ''}
+  <div class="info">${fmtDate(detail.deliveryDate)}</div>
   ${itemsSummary ? `<div class="info">${itemsSummary}</div>` : ''}
   <svg id="bc"></svg>
 </div>
 <script>
   JsBarcode('#bc', '${barcodeValue}', {
-    format: 'CODE128', width: 1, height: 20,
+    format: 'CODE128', width: 1, height: 38,
     displayValue: true, fontSize: 7, margin: 1, textMargin: 0,
   });
   window.onload = () => window.print();
