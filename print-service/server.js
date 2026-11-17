@@ -155,6 +155,7 @@ try {
     $m = New-Object System.Drawing.Drawing2D.Matrix([float]0, [float]1, [float](-1), [float]0, [float]$pb.Width, [float]0)
     $e.Graphics.Transform = $m
     $e.Graphics.DrawImage($script:img, 0, 0, $pb.Height, $pb.Width)
+    $e.HasMorePages = $false
   })
   $pd.Print()
   $script:img.Dispose()

@@ -604,27 +604,25 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
     })
   }
 
-  // Landscape canvas: 2in × 1in at 2× = 384 × 192px.
-  // Service detects portrait PageBounds (driver stock portrait) + landscape image,
-  // rotates 90° CW before drawing. Driver 90° CCW cancels it → upright on label.
-  const SCALE = 2
-  const W = 192 * SCALE   // 384px = 2in wide
-  const H = 96 * SCALE    // 192px = 1in tall
-  const pt = (p) => Math.round(p / 72 * 96 * SCALE)
+  // Landscape canvas: 2in × 1in at 203 DPI (thermal printer native).
+  // Service applies 90° CW matrix; BarTender driver 90° CCW cancels → upright.
+  const DPI = 203
+  const W = Math.round(2 * DPI)    // 406px
+  const H = Math.round(1 * DPI)    // 203px
+  const px = (mm) => Math.round(mm / 25.4 * DPI)
 
-  // Barcode canvas (no display text — order ID shown large in text above)
+  // Barcode canvas (CODE128, no display text)
   const bcCanvas = document.createElement('canvas')
   window.JsBarcode(bcCanvas, barcodeValue, {
     format: 'CODE128',
-    width: 1 * SCALE,
-    height: 28 * SCALE,
+    width: 2,
+    height: px(8),
     displayValue: false,
-    margin: 1 * SCALE,
+    margin: px(1),
     background: '#ffffff',
     lineColor: '#000000',
   })
 
-  // Compose landscape label (384 × 192)
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
@@ -635,52 +633,52 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.fillStyle = '#000000'
 
   // ── Header bar: shop name ─────────────────────────────────────────
-  const pad = Math.round(3 * SCALE)
-  const headerH = Math.round(9 * SCALE)
+  const pad = px(1)
+  const headerH = px(4)
 
   ctx.fillStyle = '#000000'
   ctx.fillRect(0, 0, W, headerH)
   ctx.fillStyle = '#ffffff'
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'center'
-  ctx.font = `bold ${pt(4)}px Arial`
+  ctx.font = `bold ${px(2.5)}px Arial`
   ctx.fillText(shopName, Math.round(W / 2), Math.round(headerH / 2))
 
   // ── Body: order ID left | details right ─────────────────────────────
   ctx.fillStyle = '#000000'
   ctx.textBaseline = 'top'
   ctx.textAlign = 'left'
-  const bodyY = headerH + Math.round(2 * SCALE)
-  const colSplit = Math.round(W * 0.45)
+  const bodyY = headerH + px(1)
+  const colSplit = Math.round(W * 0.52)
 
-  ctx.font = `bold ${pt(9)}px Arial`
-  ctx.fillText(barcodeValue, pad, bodyY + Math.round(2 * SCALE))
+  ctx.font = `bold ${px(4)}px Arial`
+  ctx.fillText(barcodeValue, pad, bodyY)
 
   // Vertical divider
-  ctx.fillRect(colSplit, bodyY, 1, Math.round(28 * SCALE))
+  ctx.fillRect(colSplit, bodyY, 1, px(12))
 
   // Right: customer details
-  const detX = colSplit + Math.round(4 * SCALE)
-  let detY = bodyY + Math.round(1 * SCALE)
-  const detLineH = Math.round(7 * SCALE)
+  const detX = colSplit + px(1.5)
+  let detY = bodyY
+  const detLineH = px(3)
 
-  ctx.font = `bold ${pt(3.5)}px Arial`
+  ctx.font = `bold ${px(2.2)}px Arial`
   if (custName) { ctx.fillText(custName, detX, detY); detY += detLineH }
 
-  ctx.font = `${pt(3)}px Arial`
+  ctx.font = `${px(2)}px Arial`
   for (const line of [mobile, entryDate, ...itemLines].filter(Boolean)) {
-    if (detY > bodyY + Math.round(26 * SCALE)) break
+    if (detY > bodyY + px(11)) break
     ctx.fillText(line, detX, detY)
     detY += detLineH
   }
 
-  // ── Thin separator ──────────────────────────────────────────────────
-  const sepY = bodyY + Math.round(30 * SCALE)
+  // ── Separator ──────────────────────────────────────────────────────
+  const sepY = bodyY + px(13)
   ctx.fillRect(pad, sepY, W - pad * 2, 1)
 
-  // ── Barcode — centered, native width for crisp scanning ─────────────
-  const bcY = sepY + Math.round(2 * SCALE)
-  const bcAvailH = H - bcY - Math.round(2 * SCALE)
+  // ── Barcode — centered, fills remaining space ──────────────────────
+  const bcY = sepY + px(0.5)
+  const bcAvailH = H - bcY - px(0.5)
   const bcMaxW = W - pad * 2
   const bcScaleR = bcCanvas.width > bcMaxW ? bcMaxW / bcCanvas.width : 1
   const bcDrawW = Math.round(bcCanvas.width * bcScaleR)
