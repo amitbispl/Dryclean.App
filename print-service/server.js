@@ -143,19 +143,24 @@ function printImage(printerName, imageBase64) {
 Add-Type -AssemblyName System.Drawing
 try {
   $script:img = [System.Drawing.Image]::FromFile('${safePath}')
+  $script:bmp = New-Object System.Drawing.Bitmap($script:img)
+  $script:img.Dispose()
+  $script:bmp.SetResolution([float]406, [float]406)
+
   $pd = New-Object System.Drawing.Printing.PrintDocument
   $pd.PrinterSettings.PrinterName = '${safePrinter}'
   $pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0, 0, 0, 0)
   $pd.add_PrintPage([System.Drawing.Printing.PrintPageEventHandler]{
     param($s, $e)
     $pb = $e.PageBounds
-    Write-Host "DEBUG pb=$($pb.Width)x$($pb.Height) img=$($script:img.Width)x$($script:img.Height)"
+    Write-Host "DEBUG pb=$($pb.Width)x$($pb.Height) img=$($script:bmp.Width)x$($script:bmp.Height) dpi=$($script:bmp.HorizontalResolution)"
     $e.Graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-    $e.Graphics.DrawImage($script:img, 0, 0, $pb.Width, $pb.Height)
+    $destRect = New-Object System.Drawing.Rectangle(0, 0, [int]$pb.Width, [int]$pb.Height)
+    $e.Graphics.DrawImage($script:bmp, $destRect)
     $e.HasMorePages = $false
   })
   $pd.Print()
-  $script:img.Dispose()
+  $script:bmp.Dispose()
   $pd.Dispose()
   Write-Output 'true'
 } catch {

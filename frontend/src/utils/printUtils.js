@@ -516,60 +516,67 @@ export async function listServicePrinters(serviceUrl = 'http://127.0.0.1:9100') 
   return json.printers || []
 }
 
-// Browser print tag — 1" × 2" label size (portrait, matches 25.4mm × 50.8mm die-cut stock)
+// Browser print tag — 2" × 1" landscape label (matches 50.8mm × 25.4mm die-cut stock)
 export function printBrowserTag(detail, fmtDate, settings = {}) {
   const shopName = settings.shopName || 'WashMitra'
-  const barcodeValue = detail.id  // order ID only — keeps barcode short and readable
+  const barcodeValue = detail.id
+  const custName = detail.custName || detail.customerName || ''
+  const mobile = detail.mobile || detail.phone || ''
+  const entryDate = detail.entryDate ? fmtDate(detail.entryDate)
+    : detail.createdAt ? fmtDate(detail.createdAt) : ''
+  const itemLines = (detail.items || []).map(it => `${it.productName} ×${it.qty}`)
 
-  const itemsSummary = (detail.items || [])
-    .map(it => `${it.productName}×${it.qty}`)
-    .join(', ')
-
-  // Single label — 2in×1in physical landscape label with barcode + order details.
-  // CSS page: 2in×1in landscape → maps directly to physical 50.8mm×25.4mm label (driver in Portrait mode).
-  // Total content height ≤ 94px (2px under 96px = 1in page height) → exactly 1 label per print.
-  const orderDate = detail.createdAt ? fmtDate(detail.createdAt) : ''
   const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Tag — ${detail.id}</title>
+<title>Tag — ${barcodeValue}</title>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
 <style>
   @page { size: 2in 1in; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 2in; font-family: Arial, sans-serif; }
-  body { page-break-after: avoid; break-after: avoid; }
-  .label { width: 2in; height: 94px; display: flex; flex-direction: column; padding: 2px 3px; }
-  .co { font-size: 8pt; font-weight: bold; text-align: center; line-height: 1.3; }
-  .info { display: flex; justify-content: space-between; font-size: 6.5pt; line-height: 1.2; white-space: nowrap; overflow: hidden; }
-  .bc-wrap { flex: 1; min-height: 0; }
-  svg { display: block; width: 100%; height: 100%; }
+  html, body { width: 2in; height: 1in; font-family: Arial, sans-serif; overflow: hidden; }
+  .label { width: 2in; height: 1in; padding: 1px 2px; display: flex; flex-direction: column; }
+  .shop { font-size: 7pt; font-weight: bold; text-align: center; line-height: 1.2; border-bottom: 0.5px solid #000; padding-bottom: 1px; }
+  .body { display: flex; flex: 1; min-height: 0; }
+  .left { width: 48%; display: flex; align-items: center; justify-content: center; font-size: 10pt; font-weight: bold; }
+  .divider { width: 0.5px; background: #000; align-self: stretch; }
+  .right { flex: 1; padding-left: 3px; font-size: 6pt; line-height: 1.3; display: flex; flex-direction: column; justify-content: center; }
+  .right .name { font-weight: bold; font-size: 7pt; }
+  .right .mob { font-weight: bold; font-size: 6.5pt; }
+  .bc-wrap { border-top: 0.5px solid #000; }
+  .bc-wrap svg { display: block; width: 100%; height: 18px; }
 </style>
 <script>
   window.addEventListener('load', function() {
     JsBarcode('#bc', '${barcodeValue}', {
-      format: 'CODE128', width: 2, height: 50,
-      displayValue: true, fontSize: 8, margin: 2, textMargin: 1,
+      format: 'CODE128', width: 1.5, height: 30,
+      displayValue: false, margin: 1,
     });
-    document.getElementById('bc').setAttribute('preserveAspectRatio', 'none');
+    document.getElementById('bc').setAttribute('preserveAspectRatio', 'xMidYMid');
     window.print();
   });
 <\/script>
 </head>
 <body>
 <div class="label">
-  <div class="co">${shopName}</div>
-  <div class="info">
-    <span>${detail.id}</span>
-    <span>${detail.customerName || ''} ${orderDate ? '· ' + orderDate : ''}</span>
+  <div class="shop">${shopName}</div>
+  <div class="body">
+    <div class="left">${barcodeValue}</div>
+    <div class="divider"></div>
+    <div class="right">
+      ${custName ? `<div class="name">${custName}</div>` : ''}
+      ${mobile ? `<div class="mob">${mobile}</div>` : ''}
+      ${entryDate ? `<div>${entryDate}</div>` : ''}
+      ${itemLines.map(l => `<div>${l}</div>`).join('')}
+    </div>
   </div>
   <div class="bc-wrap"><svg id="bc"></svg></div>
 </div>
 </body>
 </html>`
 
-  const win = window.open('', '_blank', 'width=300,height=400')
+  const win = window.open('', '_blank', 'width=300,height=200')
   if (win) {
     win.document.write(html)
     win.document.close()
@@ -624,12 +631,12 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   })
 
   const canvas = document.createElement('canvas')
-  canvas.width = H
-  canvas.height = W
+  canvas.width = H    // 203 — portrait PNG (narrow)
+  canvas.height = W   // 406 — portrait PNG (tall)
   const ctx = canvas.getContext('2d')
 
-  // Rotate canvas 90° CW so landscape content becomes portrait PNG.
-  // The BarTender driver rotates 90° CCW internally → net 0° = upright on label.
+  // Rotate so we draw in landscape coordinates (W×H) on the portrait canvas.
+  // Driver CCW + our CW = upright text on the physical label.
   ctx.setTransform(0, 1, -1, 0, H, 0)
 
   ctx.fillStyle = '#ffffff'
