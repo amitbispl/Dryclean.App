@@ -640,9 +640,10 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.fillStyle = '#000000'
 
   // ── Layout: company → name+mobile → date+product → order ID → barcode
-  const pad = px(2)
+  const margin = px(1)
+  const pad = margin
   const lineH = px(3.2)
-  let curY = px(1.5)
+  let curY = margin
 
   // 1. Company name — centered, bold
   ctx.fillStyle = '#000000'
@@ -678,7 +679,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
 
   // 5. Barcode — centered, fills remaining space
   const bcY = curY
-  const bcAvailH = H - bcY - px(0.5)
+  const bcAvailH = H - bcY - margin
   const bcMaxW = W - pad * 2
   const bcScaleR = bcCanvas.width > bcMaxW ? bcMaxW / bcCanvas.width : 1
   const bcDrawW = Math.round(bcCanvas.width * bcScaleR)
@@ -716,7 +717,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
     'DENSITY 8\r\n' +
     'SPEED 4\r\n' +
     'CLS\r\n' +
-    `BITMAP 4,2,${widthBytes},${H},0,`
+    `BITMAP 0,0,${widthBytes},${H},0,`
   )
   const footer = enc.encode('\r\nPRINT 1,1\r\n')
 
