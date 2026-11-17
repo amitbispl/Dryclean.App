@@ -631,13 +631,9 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   })
 
   const canvas = document.createElement('canvas')
-  canvas.width = H    // 203 — portrait PNG (narrow)
-  canvas.height = W   // 406 — portrait PNG (tall)
+  canvas.width = W    // 406 — landscape
+  canvas.height = H   // 203 — landscape
   const ctx = canvas.getContext('2d')
-
-  // Rotate so we draw in landscape coordinates (W×H) on the portrait canvas.
-  // Driver CCW + our CW = upright text on the physical label.
-  ctx.setTransform(0, 1, -1, 0, H, 0)
 
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, W, H)
@@ -700,12 +696,52 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.imageSmoothingEnabled = false
   ctx.drawImage(bcCanvas, bcX, bcY, bcDrawW, bcDrawH)
 
-  const imageBase64 = canvas.toDataURL('image/png').split(',')[1]
+  // ── Convert canvas to 1-bit monochrome bitmap + TSPL raw commands ──
+  // Bypasses the GDI driver entirely — sends raw bitmap data to the printer
+  // port via winspool RawPrint. No driver rotation, exactly 1 label per print.
+  const imgData = ctx.getImageData(0, 0, W, H)
+  const widthBytes = Math.ceil(W / 8)  // 51
+  const bitmapData = new Uint8Array(widthBytes * H)
 
-  const res = await fetch(`${serviceUrl}/print-image`, {
+  for (let y = 0; y < H; y++) {
+    for (let bx = 0; bx < widthBytes; bx++) {
+      let byte = 0
+      for (let bit = 0; bit < 8; bit++) {
+        const x = bx * 8 + bit
+        if (x < W) {
+          const i = (y * W + x) * 4
+          if (imgData.data[i] < 128) byte |= (0x80 >> bit)
+        }
+      }
+      bitmapData[y * widthBytes + bx] = byte
+    }
+  }
+
+  const enc = new TextEncoder()
+  const header = enc.encode(
+    'SIZE 50.8 mm, 25.4 mm\r\n' +
+    'GAP 3 mm, 0\r\n' +
+    'DIRECTION 0\r\n' +
+    'DENSITY 8\r\n' +
+    'SPEED 4\r\n' +
+    'CLS\r\n' +
+    `BITMAP 0,0,${widthBytes},${H},0,`
+  )
+  const footer = enc.encode('\r\nPRINT 1,1\r\n')
+
+  const buffer = new Uint8Array(header.length + bitmapData.length + footer.length)
+  buffer.set(header, 0)
+  buffer.set(bitmapData, header.length)
+  buffer.set(footer, header.length + bitmapData.length)
+
+  let binary = ''
+  for (let i = 0; i < buffer.length; i++) binary += String.fromCharCode(buffer[i])
+  const base64 = btoa(binary)
+
+  const res = await fetch(`${serviceUrl}/print`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ printer: printerName, image: imageBase64 }),
+    body: JSON.stringify({ printer: printerName, data: base64 }),
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok || !json.ok) throw new Error(json.error || `Print service error ${res.status}`)
