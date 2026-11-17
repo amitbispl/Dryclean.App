@@ -624,25 +624,28 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   })
 
   const canvas = document.createElement('canvas')
-  canvas.width = W
-  canvas.height = H
+  canvas.width = H
+  canvas.height = W
   const ctx = canvas.getContext('2d')
+
+  // Rotate canvas 90° CW so landscape content becomes portrait PNG.
+  // The BarTender driver rotates 90° CCW internally → net 0° = upright on label.
+  ctx.setTransform(0, 1, -1, 0, H, 0)
 
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, W, H)
   ctx.fillStyle = '#000000'
 
-  // ── Header bar: shop name ─────────────────────────────────────────
+  // ── Header: shop name (plain text, no background) ──────────────────
   const pad = px(1)
-  const headerH = px(4)
+  const headerH = px(3)
 
   ctx.fillStyle = '#000000'
-  ctx.fillRect(0, 0, W, headerH)
-  ctx.fillStyle = '#ffffff'
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'center'
-  ctx.font = `bold ${px(2.5)}px Arial`
+  ctx.font = `bold ${px(2.2)}px Arial`
   ctx.fillText(shopName, Math.round(W / 2), Math.round(headerH / 2))
+  ctx.fillRect(pad, headerH, W - pad * 2, 1)
 
   // ── Body: order ID left | details right ─────────────────────────────
   ctx.fillStyle = '#000000'
@@ -651,7 +654,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   const bodyY = headerH + px(1)
   const colSplit = Math.round(W * 0.52)
 
-  ctx.font = `bold ${px(4)}px Arial`
+  ctx.font = `bold ${px(3)}px Arial`
   ctx.fillText(barcodeValue, pad, bodyY)
 
   // Vertical divider
@@ -660,14 +663,17 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   // Right: customer details
   const detX = colSplit + px(1.5)
   let detY = bodyY
-  const detLineH = px(3)
+  const detLineH = px(3.5)
 
-  ctx.font = `bold ${px(2.2)}px Arial`
+  ctx.font = `bold ${px(2.5)}px Arial`
   if (custName) { ctx.fillText(custName, detX, detY); detY += detLineH }
 
-  ctx.font = `${px(2)}px Arial`
-  for (const line of [mobile, entryDate, ...itemLines].filter(Boolean)) {
-    if (detY > bodyY + px(11)) break
+  ctx.font = `bold ${px(2.2)}px Arial`
+  if (mobile) { ctx.fillText(mobile, detX, detY); detY += detLineH }
+
+  ctx.font = `${px(2.2)}px Arial`
+  for (const line of [entryDate, ...itemLines].filter(Boolean)) {
+    if (detY > bodyY + px(12)) break
     ctx.fillText(line, detX, detY)
     detY += detLineH
   }
