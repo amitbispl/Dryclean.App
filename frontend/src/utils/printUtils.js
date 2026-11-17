@@ -710,7 +710,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
         const x = bx * 8 + bit
         if (x < W) {
           const i = (y * W + x) * 4
-          if (imgData.data[i] < 128) byte |= (0x80 >> bit)
+          if (imgData.data[i] >= 128) byte |= (0x80 >> bit)
         }
       }
       bitmapData[y * widthBytes + bx] = byte
@@ -721,7 +721,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   const header = enc.encode(
     'SIZE 50.8 mm, 25.4 mm\r\n' +
     'GAP 3 mm, 0\r\n' +
-    'DIRECTION 0\r\n' +
+    'DIRECTION 1\r\n' +
     'DENSITY 8\r\n' +
     'SPEED 4\r\n' +
     'CLS\r\n' +
