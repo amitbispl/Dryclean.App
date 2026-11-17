@@ -674,7 +674,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.font = `bold ${px(2.2)}px Arial`
   if (mobile) { ctx.fillText(mobile, detX, detY); detY += detLineH }
 
-  ctx.font = `${px(2.2)}px Arial`
+  ctx.font = `bold ${px(2.4)}px Arial`
   for (const line of [entryDate, ...itemLines].filter(Boolean)) {
     if (detY > bodyY + px(12)) break
     ctx.fillText(line, detX, detY)
