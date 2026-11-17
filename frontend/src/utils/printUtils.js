@@ -639,54 +639,45 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.fillRect(0, 0, W, H)
   ctx.fillStyle = '#000000'
 
-  // ── Header: shop name (plain text, no background) ──────────────────
+  // ── Layout: company → name+mobile → date+product → order ID → barcode
   const pad = px(2)
-  const headerH = px(3)
+  const lineH = px(3.2)
+  let curY = px(0.5)
 
-  ctx.fillStyle = '#000000'
-  ctx.textBaseline = 'middle'
-  ctx.textAlign = 'center'
-  ctx.font = `bold ${px(2.2)}px Arial`
-  ctx.fillText(shopName, Math.round(W / 2), Math.round(headerH / 2))
-  ctx.fillRect(pad, headerH, W - pad * 2, 1)
-
-  // ── Body: order ID left | details right ─────────────────────────────
+  // 1. Company name — centered, bold
   ctx.fillStyle = '#000000'
   ctx.textBaseline = 'top'
-  ctx.textAlign = 'left'
-  const bodyY = headerH + px(1)
-  const colSplit = Math.round(W * 0.52)
-
-  ctx.font = `bold ${px(3)}px Arial`
-  ctx.fillText(barcodeValue, pad, bodyY)
-
-  // Vertical divider
-  ctx.fillRect(colSplit, bodyY, 1, px(12))
-
-  // Right: customer details
-  const detX = colSplit + px(1.5)
-  let detY = bodyY
-  const detLineH = px(3.5)
-
-  ctx.font = `bold ${px(2.5)}px Arial`
-  if (custName) { ctx.fillText(custName, detX, detY); detY += detLineH }
-
-  ctx.font = `bold ${px(2.2)}px Arial`
-  if (mobile) { ctx.fillText(mobile, detX, detY); detY += detLineH }
-
+  ctx.textAlign = 'center'
   ctx.font = `bold ${px(2.4)}px Arial`
-  for (const line of [entryDate, ...itemLines].filter(Boolean)) {
-    if (detY > bodyY + px(12)) break
-    ctx.fillText(line, detX, detY)
-    detY += detLineH
-  }
+  ctx.fillText(shopName, Math.round(W / 2), curY)
+  curY += lineH
+  ctx.fillRect(pad, curY - px(0.3), W - pad * 2, 1)
 
-  // ── Separator ──────────────────────────────────────────────────────
-  const sepY = bodyY + px(13)
-  ctx.fillRect(pad, sepY, W - pad * 2, 1)
+  // 2. Name + Mobile — on same line
+  ctx.textAlign = 'left'
+  ctx.font = `bold ${px(2.5)}px Arial`
+  if (custName) ctx.fillText(custName, pad, curY)
+  if (mobile) { ctx.textAlign = 'right'; ctx.fillText(mobile, W - pad, curY) }
+  curY += lineH
 
-  // ── Barcode — centered, fills remaining space ──────────────────────
-  const bcY = sepY + px(0.5)
+  // 3. Date + Product — on same line
+  ctx.textAlign = 'left'
+  ctx.font = `bold ${px(2.2)}px Arial`
+  if (entryDate) ctx.fillText(entryDate, pad, curY)
+  const prodText = itemLines.join(', ')
+  if (prodText) { ctx.textAlign = 'right'; ctx.fillText(prodText, W - pad, curY) }
+  curY += lineH
+
+  // 4. Order ID — centered, large bold
+  ctx.textAlign = 'center'
+  ctx.font = `bold ${px(3.5)}px Arial`
+  ctx.fillText(barcodeValue, Math.round(W / 2), curY)
+  curY += px(3.8)
+  ctx.fillRect(pad, curY, W - pad * 2, 1)
+  curY += px(0.5)
+
+  // 5. Barcode — centered, fills remaining space
+  const bcY = curY
   const bcAvailH = H - bcY - px(0.5)
   const bcMaxW = W - pad * 2
   const bcScaleR = bcCanvas.width > bcMaxW ? bcMaxW / bcCanvas.width : 1
