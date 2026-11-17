@@ -149,12 +149,9 @@ try {
   $pd.add_PrintPage([System.Drawing.Printing.PrintPageEventHandler]{
     param($s, $e)
     $pb = $e.PageBounds
-    $imgW = $script:img.Width
-    $imgH = $script:img.Height
-    Write-Host "DEBUG pb=$($pb.Width)x$($pb.Height) img=$imgW x $imgH"
-    $m = New-Object System.Drawing.Drawing2D.Matrix([float]0, [float]1, [float](-1), [float]0, [float]$pb.Width, [float]0)
-    $e.Graphics.Transform = $m
-    $e.Graphics.DrawImage($script:img, 0, 0, $pb.Height, $pb.Width)
+    Write-Host "DEBUG pb=$($pb.Width)x$($pb.Height) img=$($script:img.Width)x$($script:img.Height)"
+    $e.Graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $e.Graphics.DrawImage($script:img, 0, 0, $pb.Width, $pb.Height)
     $e.HasMorePages = $false
   })
   $pd.Print()
