@@ -640,7 +640,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.fillStyle = '#000000'
 
   // ── Header: shop name (plain text, no background) ──────────────────
-  const pad = px(1)
+  const pad = px(2)
   const headerH = px(3)
 
   ctx.fillStyle = '#000000'
@@ -725,7 +725,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
     'DENSITY 8\r\n' +
     'SPEED 4\r\n' +
     'CLS\r\n' +
-    `BITMAP 0,0,${widthBytes},${H},0,`
+    `BITMAP 4,2,${widthBytes},${H},0,`
   )
   const footer = enc.encode('\r\nPRINT 1,1\r\n')
 
