@@ -640,7 +640,7 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
   ctx.fillStyle = '#000000'
 
   // ── Layout: company → name+mobile → date+product → order ID → barcode
-  const margin = px(1)
+  const margin = px(2)
   const pad = margin
   const lineH = px(3.2)
   let curY = margin
