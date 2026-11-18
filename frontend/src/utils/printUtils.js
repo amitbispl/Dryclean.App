@@ -656,24 +656,22 @@ export async function printTagViaService(detail, fmtDate, settings = {}) {
 
   // 2. Name + Mobile — on same line
   ctx.textAlign = 'left'
-  ctx.font = `bold ${px(2.5)}px Arial`
+  ctx.font = `bold ${px(3)}px Arial`
   if (custName) ctx.fillText(custName, pad, curY)
   if (mobile) { ctx.textAlign = 'right'; ctx.fillText(mobile, W - pad, curY) }
   curY += lineH
 
-  // 3. Date + Product — on same line
+  // 3. Date — left aligned
   ctx.textAlign = 'left'
   ctx.font = `bold ${px(2.2)}px Arial`
   if (entryDate) ctx.fillText(entryDate, pad, curY)
-  const prodText = itemLines.join(', ')
-  if (prodText) { ctx.textAlign = 'right'; ctx.fillText(prodText, W - pad, curY) }
   curY += lineH
 
   // 4. Order ID — centered, large bold
   ctx.textAlign = 'center'
-  ctx.font = `bold ${px(3.5)}px Arial`
+  ctx.font = `bold ${px(4)}px Arial`
   ctx.fillText(barcodeValue, Math.round(W / 2), curY)
-  curY += px(3.8)
+  curY += px(4.5)
   ctx.fillRect(pad, curY, W - pad * 2, 1)
   curY += px(0.5)
 
