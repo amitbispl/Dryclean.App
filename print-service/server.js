@@ -56,7 +56,10 @@ function printRaw(printerName, dataBuffer) {
       if (writeErr) { resolve({ ok: false, error: writeErr.message }); return; }
 
       // PowerShell script: use .NET to send raw bytes to named printer
+      const safePrinter = printerName.replace(/'/g, "''");
+      const safeFile = tmpFile.replace(/'/g, "''");
       const ps = `
+try {
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -101,23 +104,32 @@ public class DOCINFOA {
     [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
     [MarshalAs(UnmanagedType.LPStr)] public string pDataType;
 }
-'@ -Language CSharp
-$ok = [RawPrint]::SendBytesToPrinter("${printerName}", "${tmpFile}")
+'@ -Language CSharp -ErrorAction SilentlyContinue
+$ok = [RawPrint]::SendBytesToPrinter('${safePrinter}', '${safeFile}')
 Write-Output $ok
-`.trim();
+} catch {
+  Write-Output "false:$($_.Exception.Message)"
+}`.trim();
 
       const psFile = path.join(os.tmpdir(), `rawprint_${Date.now()}.ps1`);
       fs.writeFile(psFile, ps, (psWriteErr) => {
         if (psWriteErr) { resolve({ ok: false, error: psWriteErr.message }); return; }
 
-        exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}"`, (err2, stdout2) => {
+        exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}"`, (err2, stdout2, stderr2) => {
           // Cleanup temp files
           fs.unlink(tmpFile, () => {});
           fs.unlink(psFile, () => {});
 
-          if (err2) { resolve({ ok: false, error: err2.message }); return; }
-          const result = stdout2.trim().toLowerCase();
-          resolve({ ok: result === 'true', error: result !== 'true' ? stdout2.trim() : null });
+          const output = (stdout2 || '').trim();
+          const errOutput = (stderr2 || '').trim();
+          console.log('[print-raw]', output, errOutput ? `ERR: ${errOutput}` : '');
+          if (err2) { resolve({ ok: false, error: errOutput || output || err2.message }); return; }
+          if (output.startsWith('false:')) {
+            resolve({ ok: false, error: output.substring(6) });
+          } else {
+            const result = output.toLowerCase();
+            resolve({ ok: result === 'true', error: result !== 'true' ? output : null });
+          }
         });
       });
     });
