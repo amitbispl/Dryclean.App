@@ -50,16 +50,15 @@ function listPrinters() {
 
 function printRaw(printerName, dataBuffer) {
   return new Promise((resolve) => {
-    // Write bytes to a temp file then use "copy /b" to send to printer port
     const tmpFile = path.join(os.tmpdir(), `print_${Date.now()}.bin`);
     fs.writeFile(tmpFile, dataBuffer, (writeErr) => {
       if (writeErr) { resolve({ ok: false, error: writeErr.message }); return; }
 
-      // PowerShell script: use .NET to send raw bytes to named printer
       const safePrinter = printerName.replace(/'/g, "''");
-      const safeFile = tmpFile.replace(/'/g, "''");
-      const ps = `
-try {
+      const safeFile = tmpFile.replace(/\\/g, '\\\\');
+
+      const ps =
+`try {
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -104,33 +103,29 @@ public class DOCINFOA {
     [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
     [MarshalAs(UnmanagedType.LPStr)] public string pDataType;
 }
-'@ -Language CSharp -ErrorAction SilentlyContinue
-$ok = [RawPrint]::SendBytesToPrinter('${safePrinter}', '${safeFile}')
-Write-Output $ok
+'@ -Language CSharp -ErrorAction Stop
 } catch {
-  Write-Output "false:$($_.Exception.Message)"
-}`.trim();
+  if (-not ('RawPrint' -as [type])) { throw }
+}
+$ok = [RawPrint]::SendBytesToPrinter('${safePrinter}', '${safeFile}')
+if ($ok) { Write-Output 'true' } else { Write-Output 'false:OpenPrinter failed for ${safePrinter}' }
+`;
+      // Use -EncodedCommand to avoid temp .ps1 file and script execution policy issues
+      const encoded = Buffer.from(ps, 'utf16le').toString('base64');
 
-      const psFile = path.join(os.tmpdir(), `rawprint_${Date.now()}.ps1`);
-      fs.writeFile(psFile, ps, (psWriteErr) => {
-        if (psWriteErr) { resolve({ ok: false, error: psWriteErr.message }); return; }
+      exec(`powershell -NoProfile -NonInteractive -EncodedCommand ${encoded}`, { timeout: 15000 }, (err, stdout, stderr) => {
+        fs.unlink(tmpFile, () => {});
 
-        exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${psFile}"`, (err2, stdout2, stderr2) => {
-          // Cleanup temp files
-          fs.unlink(tmpFile, () => {});
-          fs.unlink(psFile, () => {});
+        const output = (stdout || '').trim();
+        const errOutput = (stderr || '').trim();
+        console.log('[print-raw]', output || '(no output)', errOutput ? `ERR: ${errOutput}` : '');
 
-          const output = (stdout2 || '').trim();
-          const errOutput = (stderr2 || '').trim();
-          console.log('[print-raw]', output, errOutput ? `ERR: ${errOutput}` : '');
-          if (err2) { resolve({ ok: false, error: errOutput || output || err2.message }); return; }
-          if (output.startsWith('false:')) {
-            resolve({ ok: false, error: output.substring(6) });
-          } else {
-            const result = output.toLowerCase();
-            resolve({ ok: result === 'true', error: result !== 'true' ? output : null });
-          }
-        });
+        if (err) { resolve({ ok: false, error: errOutput || output || err.message }); return; }
+        if (output.startsWith('false:')) {
+          resolve({ ok: false, error: output.substring(6) });
+        } else {
+          resolve({ ok: output.toLowerCase() === 'true', error: output.toLowerCase() !== 'true' ? (output || 'Unknown error') : null });
+        }
       });
     });
   });
