@@ -705,8 +705,8 @@ app.MapGet("/api/reports/delivery", async (AppDbContext db, ClaimsPrincipal clai
 app.MapGet("/api/reports/scan", async (AppDbContext db, ClaimsPrincipal claims, string? from_date, string? to_date) =>
 {
     var companyId = GetCompanyId(claims);
-    var from = DateTime.Parse(from_date ?? DateTime.Today.AddDays(-30).ToString("yyyy-MM-dd"));
-    var to = DateTime.Parse(to_date ?? DateTime.Today.ToString("yyyy-MM-dd")).AddDays(1);
+    var from = DateTime.SpecifyKind(DateTime.Parse(from_date ?? DateTime.Today.AddDays(-30).ToString("yyyy-MM-dd")), DateTimeKind.Utc);
+    var to = DateTime.SpecifyKind(DateTime.Parse(to_date ?? DateTime.Today.ToString("yyyy-MM-dd")), DateTimeKind.Utc).AddDays(1);
 
     var q = db.OrderHistories
         .Where(h => h.UpdatedAt >= from && h.UpdatedAt < to)
