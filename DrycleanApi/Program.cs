@@ -701,6 +701,65 @@ app.MapGet("/api/reports/delivery", async (AppDbContext db, ClaimsPrincipal clai
     return Results.Ok(result);
 }).RequireAuthorization();
 
+// ─── SCAN REPORT ─────────────────────────────────────────────────────────────
+app.MapGet("/api/reports/scan", async (AppDbContext db, ClaimsPrincipal claims, string? from_date, string? to_date) =>
+{
+    var companyId = GetCompanyId(claims);
+    var from = DateTime.Parse(from_date ?? DateTime.Today.AddDays(-30).ToString("yyyy-MM-dd"));
+    var to = DateTime.Parse(to_date ?? DateTime.Today.ToString("yyyy-MM-dd")).AddDays(1);
+
+    var q = db.OrderHistories
+        .Where(h => h.UpdatedAt >= from && h.UpdatedAt < to)
+        .Join(db.Orders, h => h.OrderId, o => o.Id, (h, o) => new { h, o });
+    if (companyId.HasValue) q = q.Where(x => x.o.CompanyId == companyId);
+
+    var rows = await q.OrderByDescending(x => x.h.UpdatedAt)
+        .Select(x => new {
+            id = x.h.Id, order_id = x.h.OrderId, status = x.h.Status,
+            updated_at = x.h.UpdatedAt, updated_by = x.h.UpdatedBy, note = x.h.Note,
+            cust_name = x.o.CustName, mobile = x.o.Mobile
+        }).ToListAsync();
+
+    var summary = rows.GroupBy(r => r.status)
+        .Select(g => new { status = g.Key, count = g.Count() })
+        .OrderByDescending(x => x.count).ToList();
+
+    return Results.Ok(new { total = rows.Count, rows, summary });
+}).RequireAuthorization();
+
+// ─── BILLING REPORT ──────────────────────────────────────────────────────────
+app.MapGet("/api/reports/billing", async (AppDbContext db, ClaimsPrincipal claims, string? from_date, string? to_date, string? status, string? pay_mode) =>
+{
+    var companyId = GetCompanyId(claims);
+    var from = DateOnly.Parse(from_date ?? DateTime.Today.AddDays(-30).ToString("yyyy-MM-dd"));
+    var to = DateOnly.Parse(to_date ?? DateTime.Today.ToString("yyyy-MM-dd"));
+
+    var q = db.Orders.Include(o => o.Items).Where(o => o.EntryDate >= from && o.EntryDate <= to);
+    if (companyId.HasValue) q = q.Where(o => o.CompanyId == companyId);
+    if (!string.IsNullOrEmpty(status)) q = q.Where(o => o.Status == status);
+    if (!string.IsNullOrEmpty(pay_mode)) q = q.Where(o => o.PayMode == pay_mode);
+
+    var orders = await q.OrderByDescending(o => o.EntryDate).ThenByDescending(o => o.CreatedAt).ToListAsync();
+
+    var rows = orders.Select(o => new {
+        id = o.Id, entry_date = o.EntryDate.ToString("yyyy-MM-dd"),
+        delivery_date = o.DeliveryDate.ToString("yyyy-MM-dd"),
+        cust_name = o.CustName, mobile = o.Mobile, customer_type = o.CustomerType,
+        items = string.Join(", ", o.Items.Select(i => $"{i.ProductName} x{i.Qty}")),
+        total = o.Total, discount = o.Discount, advance = o.Advance, balance = o.Balance,
+        pay_mode = o.PayMode, status = o.Status
+    }).ToList();
+
+    return Results.Ok(new {
+        total_orders = orders.Count,
+        total_amount = orders.Sum(o => o.Total),
+        total_discount = orders.Sum(o => o.Discount),
+        total_advance = orders.Sum(o => o.Advance),
+        total_balance = orders.Sum(o => o.Balance),
+        rows
+    });
+}).RequireAuthorization();
+
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 app.MapGet("/api/settings", async (AppDbContext db, ClaimsPrincipal claims) =>
 {

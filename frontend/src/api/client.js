@@ -66,6 +66,8 @@ export const getCategories = () => api.get('/categories').then(r => r.data)
 // ─── REPORTS ────────────────────────────────────────────────────────────
 export const getSalesReport = (params = {}) => api.get('/reports/sales', { params }).then(r => r.data)
 export const getDeliveryReport = (params = {}) => api.get('/reports/delivery', { params }).then(r => r.data)
+export const getScanReport = (params = {}) => api.get('/reports/scan', { params }).then(r => r.data)
+export const getBillingReport = (params = {}) => api.get('/reports/billing', { params }).then(r => r.data)
 
 // ─── SETTINGS ───────────────────────────────────────────────────────────
 export const getSettings = () => api.get('/settings').then(r => r.data)

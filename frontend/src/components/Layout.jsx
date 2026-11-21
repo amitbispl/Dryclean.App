@@ -12,7 +12,8 @@ function initials(name) {
 const pageTitles = {
   '/': 'Dashboard', '/new-order': 'New Order', '/orders': 'All Orders',
   '/scan': 'Scan Station', '/status': 'Order Status', '/delivery': 'Delivery Management', '/reports': 'Sales Report',
-  '/billing': 'Billing', '/products': 'Products', '/categories': 'Categories', '/customers': 'Customers',
+  '/billing': 'Billing', '/scan-report': 'Scan Report', '/billing-report': 'Billing Report',
+  '/products': 'Products', '/categories': 'Categories', '/customers': 'Customers',
   '/settings': 'Settings', '/users': 'Users', '/companies': 'Companies', '/subscriptions': 'Subscriptions'
 }
 
@@ -71,6 +72,8 @@ export default function Layout({ children, overdueCnt = 0 }) {
           <div className="nav-label">Reports</div>
           <NavItem path="/reports" label="Sales Report" icon={<svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>} />
           <NavItem path="/billing" label="Billing" icon={<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>} />
+          <NavItem path="/scan-report" label="Scan Report" icon={<svg viewBox="0 0 24 24"><path d="M3 5h2M3 10h2M3 15h2M7 3v18M17 3v18M21 5h-2M21 10h-2M21 15h-2"/><path d="M11 7h2M11 12h2"/></svg>} />
+          <NavItem path="/billing-report" label="Billing Report" icon={<svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>} />
         </div>
 
         <div className="nav-group">

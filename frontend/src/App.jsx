@@ -8,6 +8,8 @@ import OrderStatus from './components/OrderStatus'
 import Delivery from './components/Delivery'
 import Reports from './components/Reports'
 import Billing from './components/Billing'
+import ScanReport from './components/ScanReport'
+import BillingReport from './components/BillingReport'
 import ScanStation from './components/ScanStation'
 import Products from './components/Products'
 import Customers from './components/Customers'
@@ -70,6 +72,8 @@ function AppRoutes() {
               <Route path="/delivery" element={<Delivery />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/billing" element={<Billing />} />
+              <Route path="/scan-report" element={<ScanReport />} />
+              <Route path="/billing-report" element={<BillingReport />} />
               <Route path="/products" element={<Products />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/customers" element={<Customers />} />
